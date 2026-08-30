@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.vite/
+*.local
+*.log
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+# Données financières personnelles
+docs/Patrimoine.ods
+/patrimoine.ods
