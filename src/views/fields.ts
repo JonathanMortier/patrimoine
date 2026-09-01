@@ -4,7 +4,8 @@ import { bourseTotal } from '../calc/bourse'
 import { assuranceVieTotal } from '../calc/assuranceVie'
 import { crowdlendingTotals } from '../calc/crowdlending'
 import { cryptoTotals } from '../calc/crypto'
-import { fmtEuro, fmtAmount } from '../utils/format'
+import { horsImmoLiquidity } from '../calc/horsImmo'
+import { fmtEuro, fmtAmount, fmtPct } from '../utils/format'
 
 export type DomainKey = 'bourse' | 'assuranceVie' | 'crowdlending' | 'crypto' | 'horsImmo'
 
@@ -28,6 +29,7 @@ export const DOMAIN_GROUPS: GroupSpec[] = [
       { path: 'bourse.cto', label: 'CTO' },
       { path: 'bourse.privateMk', label: 'Private Market' },
       { path: 'bourse.pea', label: 'PEA (ss espèces)' },
+      { path: 'bourse.plusValue', label: 'Plus-value' },
     ],
   },
   {
@@ -39,16 +41,17 @@ export const DOMAIN_GROUPS: GroupSpec[] = [
       { path: 'assuranceVie.cashFortuneo', label: 'Cash sur Fortuneo' },
       { path: 'assuranceVie.linxea', label: 'Linxea Spirit 2' },
       { path: 'assuranceVie.scpi', label: 'SCPI' },
-      { path: 'assuranceVie.investCumule', label: 'Versements cumulés' },
     ],
   },
   {
     id: 'crowdlending',
     label: 'Crowdfunding',
+    hint: 'Fiscalité = prélèvement sur le revenu brut (vide → 30 % par défaut).',
     fields: [
       { path: 'crowdlending.investi', label: 'Bricks investies' },
       { path: 'crowdlending.soldeDispo', label: 'Solde dispo' },
       { path: 'crowdlending.revenuBrut', label: 'Revenu brut (mensuel)' },
+      { path: 'crowdlending.fiscalite', label: 'Fiscalité (mensuel)' },
     ],
   },
   {
@@ -70,8 +73,11 @@ export const DOMAIN_GROUPS: GroupSpec[] = [
     label: 'Comptes / Livrets',
     hint: 'Le total du Hors immo est recalculé, les autres postes viennent des domaines.',
     fields: [
-      { path: 'horsImmo.compteCourant', label: 'Compte courant' },
-      { path: 'horsImmo.livrets', label: 'Livrets' },
+      { path: 'horsImmo.compteCourantCa', label: 'Compte courant — Crédit Agricole' },
+      { path: 'horsImmo.compteCourantFortuneo', label: 'Compte courant — Fortuneo' },
+      { path: 'horsImmo.compteCourantTradeRep', label: 'Compte courant — Trade Republic' },
+      { path: 'horsImmo.livretA', label: 'Livret A' },
+      { path: 'horsImmo.ldd', label: 'LDD' },
     ],
   },
 ]
@@ -153,8 +159,10 @@ export function groupTotal(id: DomainKey, month: MonthRecord, constantes: Consta
       return crowdlendingTotals(month.crowdlending).total
     case 'crypto':
       return cryptoTotals(month.crypto, constantes.convUsdEur).totalEur
-    case 'horsImmo':
-      return month.horsImmo.compteCourant + month.horsImmo.livrets
+    case 'horsImmo': {
+      const liquidity = horsImmoLiquidity(month.horsImmo)
+      return liquidity.compteCourant + liquidity.livrets
+    }
   }
 }
 
@@ -174,21 +182,24 @@ export function summaryHtml(live: MonthLive): string {
     live.variation === null
       ? ''
       : `<span class="var ${live.variation >= 0 ? 'pos' : 'neg'}">${live.variation >= 0 ? '▲' : '▼'} ${fmtEuro(Math.abs(live.variation))}</span>`
-  const btc = d.partBtc === null ? '' : ` · BTC ${fmtEuro(d.partBtc * 100, 1)}`
+  const btc = d.partBtc === null ? '' : ` · BTC ${fmtPct(d.partBtc * 100, 1)}`
   return `
     <div class="kpis">
       ${kpi('Hors immo', fmtEuro(live.horsImmoTotal), variation)}
       ${kpi('Bourse', fmtEuro(d.bourse))}
       ${kpi('Assurance Vie', fmtEuro(d.assuranceVie))}
       ${kpi('Crowdfunding', fmtEuro(d.crowdlending.total), `net ${fmtEuro(d.crowdlending.net)}`)}
-      ${kpi('Crypto', fmtEuro(d.crypto), `$ ${fmtEuro(d.usdEur)}${btc}`)}
+      ${kpi('Crypto', fmtEuro(d.crypto), `dont ${fmtEuro(d.usdEur)} converti de $${btc}`)}
     </div>`
 }
 
-/** Ligne « total + delta vs mois précédent » sous un groupe de champs. */
+/** Ligne « total vs total du mois précédent » sous un groupe de champs. */
 export function groupLiveHtml(label: string, total: number | null, prev: number | null): string {
-  const delta = total === null ? null : prev === null ? null : total - prev
-  const del = delta === null ? '' : `<span class="var ${delta >= 0 ? 'pos' : 'neg'}">vs ${prev === null ? '—' : fmtEuro(Math.abs(delta))}</span>`
+  const delta = total === null || prev === null ? null : total - prev
+  const del =
+    delta === null || prev === null
+      ? ''
+      : `<span class="var ${delta >= 0 ? 'pos' : 'neg'}">vs ${fmtEuro(prev)} (${delta >= 0 ? '▲' : '▼'} ${fmtEuro(Math.abs(delta))})</span>`
   return `<div class="klabel">${label} : <strong>${fmtEuro(total ?? 0)}</strong> ${del}</div>`
 }
 

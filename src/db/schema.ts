@@ -24,6 +24,7 @@ export interface BourseSnapshot {
   cto: number
   privateMk: number
   pea: number
+  plusValue: number
 }
 
 export interface AssuranceVieSnapshot {
@@ -32,13 +33,13 @@ export interface AssuranceVieSnapshot {
   cashFortuneo: number
   linxea: number
   scpi: number
-  investCumule: number
 }
 
 export interface CrowdlendingSnapshot {
   investi: number
   soldeDispo: number
   revenuBrut: number
+  fiscalite: number
 }
 
 export interface CryptoSnapshot {
@@ -52,8 +53,11 @@ export interface CryptoSnapshot {
 }
 
 export interface HorsImmoSnapshot {
-  compteCourant: number
-  livrets: number
+  compteCourantCa: number
+  compteCourantFortuneo: number
+  compteCourantTradeRep: number
+  livretA: number
+  ldd: number
 }
 
 export interface AccountState {

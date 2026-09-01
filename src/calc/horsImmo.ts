@@ -1,4 +1,6 @@
 /** Hors immo : total = comptes + livrets + totaux des domaines. */
+import type { HorsImmoSnapshot } from '../db/schema'
+
 export interface HorsImmoParts {
   compteCourant: number
   livrets: number
@@ -6,6 +8,14 @@ export interface HorsImmoParts {
   assuranceVie: number
   crowdlending: number
   crypto: number
+}
+
+/** Sous-totaux liquides : comptes courants et livrets, chacun sommés. */
+export function horsImmoLiquidity(h: HorsImmoSnapshot): { compteCourant: number; livrets: number } {
+  return {
+    compteCourant: h.compteCourantCa + h.compteCourantFortuneo + h.compteCourantTradeRep,
+    livrets: h.livretA + h.ldd,
+  }
 }
 
 export function horsImmoTotal(parts: HorsImmoParts): number {

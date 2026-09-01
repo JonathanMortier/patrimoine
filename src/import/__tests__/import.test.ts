@@ -76,6 +76,7 @@ describe('parseSheet', () => {
     expect(r.rows[0].values.cto).toBe(11844.02)
     expect(r.rows[0].values.privateMk).toBe(251.71)
     expect(r.rows[0].values.pea).toBe(29496.56)
+    expect(r.rows[0].values.plusValue).toBe(3250.94)
     expect(r.rows[1].values.cto).toBe(16913.84)
   })
   it('Assurance Vie : composants distincts, notes non numériques ignorées', () => {
@@ -124,13 +125,20 @@ describe('mergeDomain', () => {
     expect(month.bourse.cto).toBeCloseTo(11844.02, 4)
     expect(month.bourse.privateMk).toBeCloseTo(251.71, 4)
     expect(month.bourse.pea).toBeCloseTo(29496.56, 4)
+    expect(month.bourse.plusValue).toBeCloseTo(3250.94, 4)
   })
   it('crypto : garde les autres domaines du mois', () => {
     const r = parseSheet(CRYPTO_TSV, 'crypto')
-    const month: MonthRecord = { ...newMonth('2026-03'), bourse: { cto: 11844.02, privateMk: 251.71, pea: 29496.56 } }
+    const month: MonthRecord = { ...newMonth('2026-03'), bourse: { cto: 11844.02, privateMk: 251.71, pea: 29496.56, plusValue: 3250.94 } }
     mergeDomain(month, 'crypto', r.rows[0].values)
     expect(month.bourse.cto).toBe(11844.02)
     expect(month.crypto.defiUSD).toBe(1536.72)
+  })
+  it('crowdlending : fiscalité mergée depuis la colonne', () => {
+    const r = parseSheet(CROWD_TSV, 'crowdlending')
+    const month = mergeDomain(newMonth(r.rows[1].id), 'crowdlending', r.rows[1].values)
+    expect(month.crowdlending.revenuBrut).toBeCloseTo(50.52, 4)
+    expect(month.crowdlending.fiscalite).toBeCloseTo(13.62, 4)
   })
 })
 
@@ -138,19 +146,19 @@ describe('reconcileMonths', () => {
   it('reconstruit le hors immo et détecte les écarts / domaines manquants', () => {
     const ok: MonthRecord = {
       id: '2026-08',
-      bourse: { cto: 16913.84, privateMk: 467.14, pea: 34312.95 },
-      assuranceVie: { livretVie: 150.33, multiVie: 39306.06, cashFortuneo: 16370, linxea: 2491.1, scpi: 15150, investCumule: 0 },
-      crowdlending: { investi: 8525.37, soldeDispo: 10.21, revenuBrut: 48.88 },
+      bourse: { cto: 16913.84, privateMk: 467.14, pea: 34312.95, plusValue: 5038.48 },
+      assuranceVie: { livretVie: 150.33, multiVie: 39306.06, cashFortuneo: 16370, linxea: 2491.1, scpi: 15150 },
+      crowdlending: { investi: 8525.37, soldeDispo: 10.21, revenuBrut: 48.88, fiscalite: 13.84 },
       crypto: { tradeRep: 202.18, binance: 0, ledger: 6963.28, hotWalletPrincipalUSD: 7530.98, hotWalletLedgerUSD: 1744.45, defiUSD: 1740.55, btc: 0.15 },
-      horsImmo: { compteCourant: 10341.02, livrets: 17502.76 },
+      horsImmo: { compteCourantCa: 10341.02, compteCourantFortuneo: 0, compteCourantTradeRep: 0, livretA: 17502.76, ldd: 0 },
     }
     const onlyBourse: MonthRecord = {
       id: '2025-01',
-      bourse: { cto: 100, privateMk: 0, pea: 0 },
-      assuranceVie: { livretVie: 0, multiVie: 0, cashFortuneo: 0, linxea: 0, scpi: 0, investCumule: 0 },
-      crowdlending: { investi: 0, soldeDispo: 0, revenuBrut: 0 },
+      bourse: { cto: 100, privateMk: 0, pea: 0, plusValue: 0 },
+      assuranceVie: { livretVie: 0, multiVie: 0, cashFortuneo: 0, linxea: 0, scpi: 0 },
+      crowdlending: { investi: 0, soldeDispo: 0, revenuBrut: 0, fiscalite: 0 },
       crypto: { tradeRep: 0, binance: 0, ledger: 0, hotWalletPrincipalUSD: 0, hotWalletLedgerUSD: 0, defiUSD: 0, btc: 0 },
-      horsImmo: { compteCourant: 0, livrets: 0 },
+      horsImmo: { compteCourantCa: 0, compteCourantFortuneo: 0, compteCourantTradeRep: 0, livretA: 0, ldd: 0 },
     }
     const sources = new Map<string, number>([['2026-08', 179103.49]])
     const rows = reconcileMonths([onlyBourse, ok], sources, 1.14)

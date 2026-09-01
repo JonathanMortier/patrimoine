@@ -34,6 +34,9 @@ describe('exports réels des feuilles (layouts courants)', () => {
     const last = r.rows.find((x) => x.id === '2026-08')!.values
     expect(last.cto).toBeCloseTo(16913.84, 4)
     expect(last.total).toBeCloseTo(51693.93, 4)
+    // Colonne E = Plus value, renseignée aussi avant 2026
+    expect(r.rows.find((x) => x.id === '2025-05')!.values.plusValue).toBeCloseTo(-344.28, 4)
+    expect(m26.plusValue).toBeCloseTo(3250.94, 4)
   })
   it('Crypto : 25 mois, $ convertis et colonnes par wallet', () => {
     const r = parsed('crypto', cryptoRaw)

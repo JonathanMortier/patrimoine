@@ -9,9 +9,9 @@ export interface CrowdlendingTotals {
   net: number
 }
 
-/** total = investi + solde dispo ; fiscalité = 30 % du brut (règle du plan). */
+/** total = investi + solde dispo ; fiscalité = montant saisi, sinon 30 % du brut. */
 export function crowdlendingTotals(c: CrowdlendingSnapshot): CrowdlendingTotals {
-  const fiscalite = c.revenuBrut * FISCALITE_RATE
+  const fiscalite = c.fiscalite > 0 ? c.fiscalite : c.revenuBrut * FISCALITE_RATE
   return { total: c.investi + c.soldeDispo, fiscalite, net: c.revenuBrut - fiscalite }
 }
 

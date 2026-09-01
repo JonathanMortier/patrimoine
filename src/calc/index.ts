@@ -2,7 +2,7 @@ import { bourseTotal } from './bourse'
 import { assuranceVieTotal } from './assuranceVie'
 import { crowdlendingTotals } from './crowdlending'
 import { cryptoTotals, cryptoBtcPart } from './crypto'
-import { horsImmoTotal, horsImmoVariation, type HorsImmoParts } from './horsImmo'
+import { horsImmoTotal, horsImmoLiquidity, horsImmoVariation, type HorsImmoParts } from './horsImmo'
 import type { Constantes, MonthRecord } from '../db/schema'
 
 export interface DerivedMonth {
@@ -29,15 +29,18 @@ export function computeDerivedMonth(
   const crowdlending = crowdlendingTotals(month.crowdlending)
   const crypto = cryptoTotals(month.crypto, constantes.convUsdEur)
 
+  const liquidity = horsImmoLiquidity(month.horsImmo)
+
   const parts: HorsImmoParts = {
-    compteCourant: month.horsImmo.compteCourant,
-    livrets: month.horsImmo.livrets,
+    compteCourant: liquidity.compteCourant,
+    livrets: liquidity.livrets,
     bourse,
     assuranceVie,
     crowdlending: crowdlending.total,
     crypto: crypto.totalEur,
   }
   const total = horsImmoTotal(parts)
+  const btcEurPrice = constantes.btcEur || (constantes.btcUsd / (constantes.convUsdEur || 1))
 
   return {
     bourse,
@@ -45,7 +48,7 @@ export function computeDerivedMonth(
     crowdlending,
     crypto: crypto.totalEur,
     usdEur: crypto.usdEur,
-    partBtc: cryptoBtcPart(month.crypto.btc, constantes.btcEur, crypto.totalEur),
+    partBtc: cryptoBtcPart(month.crypto.btc, btcEurPrice, crypto.totalEur),
     horsImmo: {
       total,
       variation: horsImmoVariation(total, prevHorsImmoTotal),

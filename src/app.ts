@@ -2,15 +2,13 @@ import { lock } from './crypto/security'
 import { emitAuthEvent } from './events'
 import { renderReglages } from './views/reglages'
 import { renderImport } from './views/import'
-import { renderDomaines } from './views/domaines'
 import { renderSaisie } from './views/saisie'
 
-export type Route = 'dashboard' | 'saisie' | 'domaines' | 'import' | 'credits' | 'projection' | 'reglages'
+export type Route = 'dashboard' | 'saisie' | 'import' | 'credits' | 'projection' | 'reglages'
 
 export const ROUTES: { id: Route; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: '▦' },
   { id: 'saisie', label: 'Saisie', icon: '✎' },
-  { id: 'domaines', label: 'Domaines', icon: '◫' },
   { id: 'import', label: 'Import', icon: '⤓' },
   { id: 'credits', label: 'Crédits', icon: '⌂' },
   { id: 'projection', label: 'Projection', icon: '↗' },
@@ -87,17 +85,12 @@ function render(): void {
   rootTabs().forEach((btn) => btn.classList.toggle('active', btn.dataset.route === active))
 
   if (active === 'reglages') {
-    renderReglages(view)
+    void renderReglages(view).catch((err) => showRenderError(view, err))
     return
   }
 
   if (active === 'import') {
     renderImport(view)
-    return
-  }
-
-  if (active === 'domaines') {
-    void renderDomaines(view).catch((err) => showRenderError(view, err))
     return
   }
 
@@ -109,7 +102,6 @@ function render(): void {
   const labels: Record<Route, string> = {
     dashboard: 'Dashboard',
     saisie: 'Assistant du 1er du mois',
-    domaines: 'Domaines',
     import: 'Import initial',
     credits: 'Crédits immo',
     projection: 'Projection Bourse',

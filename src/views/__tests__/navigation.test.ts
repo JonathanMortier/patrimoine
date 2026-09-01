@@ -56,11 +56,10 @@ describe('navigation par onglets', () => {
     expect(tabFor('dashboard').classList.contains('active')).toBe(false)
   })
 
-  it('navigue vers Domaines et rend ses onglets', async () => {
-    tabFor('domaines').click()
-    await waitContent('Totaux du mois')
+  it('navigue vers Saisie et rend l’historique par domaine', async () => {
+    tabFor('saisie').click()
+    await waitContent('Historique')
     expect(view().querySelectorAll('.seg').length).toBe(5)
-    expect(view().textContent).toContain('Historique — Bourse')
     expect(view().textContent).toContain('Aucun mois enregistré')
   })
 
@@ -74,11 +73,11 @@ describe('navigation par onglets', () => {
   it('affiche un message d’erreur clair quand l’écran ne peut pas s’afficher (session verrouillée)', async () => {
     await monthRepo.save({
       id: currentMonthId(),
-      bourse: { cto: 0, privateMk: 0, pea: 0 },
-      assuranceVie: { livretVie: 0, multiVie: 0, cashFortuneo: 0, linxea: 0, scpi: 0, investCumule: 0 },
-      crowdlending: { investi: 0, soldeDispo: 0, revenuBrut: 0 },
+      bourse: { cto: 0, privateMk: 0, pea: 0, plusValue: 0 },
+      assuranceVie: { livretVie: 0, multiVie: 0, cashFortuneo: 0, linxea: 0, scpi: 0 },
+      crowdlending: { investi: 0, soldeDispo: 0, revenuBrut: 0, fiscalite: 0 },
       crypto: { tradeRep: 0, binance: 0, ledger: 0, hotWalletPrincipalUSD: 0, hotWalletLedgerUSD: 0, defiUSD: 0, btc: 0 },
-      horsImmo: { compteCourant: 0, livrets: 0 },
+      horsImmo: { compteCourantCa: 0, compteCourantFortuneo: 0, compteCourantTradeRep: 0, livretA: 0, ldd: 0 },
     })
     lock()
     tabFor('saisie').click()
@@ -91,7 +90,6 @@ it('declare tous les onglets utilisés par le menu', () => {
   expect(ROUTES.map((r) => r.id)).toEqual([
     'dashboard',
     'saisie',
-    'domaines',
     'import',
     'credits',
     'projection',

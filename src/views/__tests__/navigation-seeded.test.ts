@@ -30,11 +30,11 @@ describe('navigation avec mois déjà enregistrés', () => {
     for (const id of ids) {
       await monthRepo.save({
         id,
-        bourse: { cto: 1000, privateMk: 0, pea: 500 },
-        assuranceVie: { livretVie: 0, multiVie: 0, cashFortuneo: 0, linxea: 0, scpi: 0, investCumule: 0 },
-        crowdlending: { investi: 0, soldeDispo: 0, revenuBrut: 0 },
+        bourse: { cto: 1000, privateMk: 0, pea: 500, plusValue: 0 },
+        assuranceVie: { livretVie: 0, multiVie: 0, cashFortuneo: 0, linxea: 0, scpi: 0 },
+        crowdlending: { investi: 0, soldeDispo: 0, revenuBrut: 0, fiscalite: 0 },
         crypto: { tradeRep: 0, binance: 0, ledger: 0, hotWalletPrincipalUSD: 0, hotWalletLedgerUSD: 0, defiUSD: 0, btc: 0 },
-        horsImmo: { compteCourant: 500, livrets: 0 },
+        horsImmo: { compteCourantCa: 500, compteCourantFortuneo: 0, compteCourantTradeRep: 0, livretA: 0, ldd: 0 },
       })
     }
     document.body.innerHTML = '<div id="app"></div>'
@@ -48,7 +48,7 @@ describe('navigation avec mois déjà enregistrés', () => {
     const selected = select.querySelector<HTMLOptionElement>('option[selected]')?.value
     const options = Array.from(select.options).map((o) => o.value)
     expect(selected).toBe('2026-12')
-    expect(options).toContain('2026-08')
+    expect(options).toContain(currentMonthId())
     expect(options).toContain('2026-11')
   })
 
@@ -56,7 +56,7 @@ describe('navigation avec mois déjà enregistrés', () => {
     tabFor('saisie').click()
     await vi.waitFor(() => expect(view().textContent).toContain('Assistant'))
     const norm = view().textContent!.replace(/[\u202f\u00a0]/g, ' ')
-    expect(norm).toContain('vs 1 500 €')
-    expect(norm).toContain('vs')
+    expect(norm).toContain('vs 1 500 € (▼ 1 500 €)')
+    expect(norm).toContain('vs 500 € (▼ 500 €)')
   })
 })

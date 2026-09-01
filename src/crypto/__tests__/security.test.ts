@@ -66,7 +66,7 @@ describe('verrouillage / déverrouillage', () => {
   it('mauvais mot de passe reste verrouillé ; le bon déverrouille et déchiffre', async () => {
     await setup('motdepasse', ITER)
     const month = newMonth('2026-08')
-    month.horsImmo.compteCourant = 6400
+    month.horsImmo.compteCourantCa = 6400
     await monthRepo.save(month)
     lock()
 
@@ -75,7 +75,7 @@ describe('verrouillage / déverrouillage', () => {
 
     await unlock('motdepasse')
     expect(await securityStatus()).toBe('unlocked')
-    expect((await monthRepo.get('2026-08'))?.horsImmo.compteCourant).toBe(6400)
+    expect((await monthRepo.get('2026-08'))?.horsImmo.compteCourantCa).toBe(6400)
   })
 
   it('changePassword est refusé tant que verrouillé', async () => {

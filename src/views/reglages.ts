@@ -1,7 +1,22 @@
 import { changePassword, PasswordError, LockedError } from '../crypto/security'
+import { constantesRepo } from '../db/repos/constantes'
+import { fmtAmount } from '../utils/format'
 
-export function renderReglages(view: HTMLElement): void {
+export async function renderReglages(view: HTMLElement): Promise<void> {
+  const constantes = await constantesRepo.get()
+
   view.innerHTML = `
+    <section class="card" id="conv-card">
+      <h2>Conversion dollar → euro</h2>
+      <p class="muted">Les wallets en $ de la section Crypto sont convertis via « 1 € = X $ ».</p>
+      <label class="field">
+        <span>1 € = ? $</span>
+        <input type="number" inputmode="decimal" step="0.01" min="0.0001" name="convUsdEur" value="${fmtAmount(constantes.convUsdEur)}" />
+      </label>
+      <button id="save-conv" class="primary">Enregistrer la conversion</button>
+      <p class="msg" aria-live="polite"></p>
+    </section>
+
     <section class="card">
       <h2>Changer le mot de passe</h2>
       <p class="muted">Le changement ne re-chiffre pas vos données : seule la clé de chiffrement est re-protégée.</p>
@@ -24,7 +39,27 @@ export function renderReglages(view: HTMLElement): void {
     </section>
   `
 
-  const msg = view.querySelector<HTMLParagraphElement>('.msg')!
+  const convMsg = view.querySelector<HTMLParagraphElement>('#conv-card .msg')!
+  view.querySelector('#save-conv')!.addEventListener('click', async () => {
+    const raw = (view.querySelector('[name=convUsdEur]') as HTMLInputElement).value.trim().replace(',', '.')
+    const n = parseFloat(raw)
+    if (!Number.isFinite(n) || n <= 0) {
+      convMsg.textContent = 'Conversion invalide (nombre strictement positif).'
+      convMsg.className = 'msg err'
+      return
+    }
+    try {
+      const current = await constantesRepo.get()
+      await constantesRepo.save({ ...current, convUsdEur: n })
+      convMsg.textContent = `Conversion enregistrée : 1 € = ${fmtAmount(n)} $`
+      convMsg.className = 'msg ok'
+    } catch (err) {
+      convMsg.textContent = err instanceof LockedError ? err.message : 'Enregistrement impossible (session verrouillée ?).'
+      convMsg.className = 'msg err'
+    }
+  })
+
+  const msg = view.querySelector<HTMLParagraphElement>('#pw-form .msg')!
   view.querySelector('#pw-form')!.addEventListener('submit', async (ev) => {
     ev.preventDefault()
     const get = (name: string) => (view.querySelector(`[name=${name}]`) as HTMLInputElement).value

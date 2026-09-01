@@ -3,7 +3,7 @@ import { assuranceVieTotal } from '../calc/assuranceVie'
 import { bourseTotal } from '../calc/bourse'
 import { crowdlendingTotals } from '../calc/crowdlending'
 import { cryptoTotals } from '../calc/crypto'
-import { horsImmoTotal } from '../calc/horsImmo'
+import { horsImmoTotal, horsImmoLiquidity } from '../calc/horsImmo'
 
 export interface ReconciledRow {
   id: string
@@ -32,9 +32,10 @@ export function reconcileMonths(
     .slice()
     .sort((a, b) => (a.id < b.id ? -1 : 1))
     .map((m) => {
+      const liquidity = horsImmoLiquidity(m.horsImmo)
       const parts = {
-        compteCourant: m.horsImmo.compteCourant,
-        livrets: m.horsImmo.livrets,
+        compteCourant: liquidity.compteCourant,
+        livrets: liquidity.livrets,
         bourse: bourseTotal(m.bourse),
         assuranceVie: assuranceVieTotal(m.assuranceVie),
         crowdlending: crowdlendingTotals(m.crowdlending).total,

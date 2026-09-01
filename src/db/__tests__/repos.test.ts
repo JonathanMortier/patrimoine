@@ -4,7 +4,7 @@ import { monthRepo, newMonth } from '../repos/months'
 import { constantesRepo, DEFAULT_CONSTANTES } from '../repos/constantes'
 import { creditsRepo, loanKey } from '../repos/credits'
 import { patrimoineRepo } from '../repos/patrimoine'
-import type { Loan } from '../schema'
+import type { Loan, MonthRecord } from '../schema'
 
 describe('repositories', () => {
   beforeEach(async () => {
@@ -17,13 +17,31 @@ describe('repositories', () => {
 
       const month = newMonth('2026-08')
       month.bourse.cto = 12500
-      month.horsImmo.compteCourant = 4320.5
+      month.horsImmo.compteCourantCa = 4320.5
 
       await monthRepo.save(month)
 
       const read = await monthRepo.get('2026-08')
       expect(read?.bourse.cto).toBe(12500)
-      expect(read?.horsImmo.compteCourant).toBe(4320.5)
+      expect(read?.horsImmo.compteCourantCa).toBe(4320.5)
+    })
+
+    it('migre l’ancien schéma horsImmo (compteCourant/livrets) en nouveaux champs', async () => {
+      const raw = {
+        id: '2026-08',
+        bourse: { cto: 1, privateMk: 0, pea: 0, plusValue: 0 },
+        assuranceVie: { livretVie: 0, multiVie: 0, cashFortuneo: 0, linxea: 0, scpi: 0 },
+        crowdlending: { investi: 0, soldeDispo: 0, revenuBrut: 0, fiscalite: 0 },
+        crypto: { tradeRep: 0, binance: 0, ledger: 0, hotWalletPrincipalUSD: 0, hotWalletLedgerUSD: 0, defiUSD: 0, btc: 0 },
+        horsImmo: { compteCourant: 10341.02, livrets: 17502.76 },
+      } as unknown as MonthRecord
+      await monthRepo.save(raw)
+
+      const read = (await monthRepo.get('2026-08'))!
+      expect(read.bourse.cto).toBe(1)
+      expect(read.horsImmo.compteCourantCa).toBe(10341.02)
+      expect(read.horsImmo.livretA).toBe(17502.76)
+      expect(read.horsImmo.ldd).toBe(0)
     })
 
     it('stores records in chronological order', async () => {

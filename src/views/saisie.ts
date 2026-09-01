@@ -7,11 +7,14 @@ import {
   collectMonth,
   summaryHtml,
   monthLive,
+  groupTotal,
+  type DomainKey,
   type MonthLive,
 } from './fields'
 import { fmtEuro } from '../utils/format'
 
 let targetMonth = ''
+let historyGroup: DomainKey = 'bourse'
 
 export async function renderSaisie(view: HTMLElement): Promise<void> {
   const constantes = await constantesRepo.get()
@@ -53,10 +56,13 @@ export async function renderSaisie(view: HTMLElement): Promise<void> {
       ${DOMAIN_GROUPS.map((g, i) => {
         const total = liveTotalFor(g.id, base, constantes)
         const prevTotal = prev ? liveTotalFor(g.id, prev, constantes) : undefined
-        const delta = prevTotal === undefined ? '' : ` <span class="var ${total >= prevTotal ? 'pos' : 'neg'}">vs ${fmtEuro(Math.abs(total - prevTotal))}</span>`
+        const prevStr =
+          prevTotal === undefined
+            ? ''
+            : ` <span class="var ${total >= prevTotal ? 'pos' : 'neg'}">vs ${fmtEuro(prevTotal)} (${total >= prevTotal ? '▲' : '▼'} ${fmtEuro(Math.abs(total - prevTotal))})</span>`
         return `
           <section class="card step" data-step="${i + 1}">
-            <div class="step-head"><span class="badge">${i + 1}</span><h2>${g.label}</h2><span class="step-total" id="step-total-${g.id}">${fmtEuro(total)}${delta}</span></div>
+            <div class="step-head"><span class="badge">${i + 1}</span><h2>${g.label}</h2><span class="step-total" id="step-total-${g.id}">${fmtEuro(total)}${prevStr}</span></div>
             ${g.hint ? `<p class="muted">${g.hint}</p>` : ''}
             <div class="grid2">
               ${g.fields
@@ -72,6 +78,14 @@ export async function renderSaisie(view: HTMLElement): Promise<void> {
     </div>
 
     <section class="card">
+      <h2>Historique</h2>
+      <div class="segs" role="tablist">
+        ${DOMAIN_GROUPS.map((g) => `<button class="seg ${g.id === historyGroup ? 'active' : ''}" data-hgroup="${g.id}">${g.label}</button>`).join('')}
+      </div>
+      <div id="history">${renderHistory(months, constantes)}</div>
+    </section>
+
+    <section class="card">
       <div class="row">
         <button id="save" class="primary">Enregistrer ${formatMonthLabel(targetMonth)}</button>
         <span class="muted">Écriture chiffrée.</span>
@@ -82,7 +96,39 @@ export async function renderSaisie(view: HTMLElement): Promise<void> {
 
   bindMonthSelect(view, ids)
   bindStepsTotal(view, live, constantes)
+  bindHistoryTabs(view, months, constantes)
   bindSave(view)
+}
+
+function renderHistory(months: MonthRecord[], constantes: Constantes): string {
+  const group = DOMAIN_GROUPS.find((g) => g.id === historyGroup)!
+  const rows = [...months].sort((a, b) => compareMonthIds(a.id, b.id)).slice(-12).reverse()
+  if (rows.length === 0) return '<p class="muted">Aucun mois enregistré.</p>'
+  const head = `<tr><th>Mois</th>${group.fields.map((f) => `<th>${f.label}</th>`).join('')}<th>Total</th></tr>`
+  const body = rows
+    .map((m) => {
+      const cells = group.fields
+        .map((f) => {
+          const [d, k] = f.path.split('.') as [DomainKey, string]
+          const v = (m[d] as unknown as Record<string, number>)[k] ?? 0
+          return `<td>${fmtEuro(v)}</td>`
+        })
+        .join('')
+      return `<tr><td>${m.id}</td>${cells}<td><strong>${fmtEuro(groupTotal(group.id, m, constantes))}</strong></td></tr>`
+    })
+    .join('')
+  return `<div class="table-wrap"><table class="grid"><thead>${head}</thead><tbody>${body}</tbody></table></div>`
+}
+
+function bindHistoryTabs(view: HTMLElement, months: MonthRecord[], constantes: Constantes): void {
+  DOMAIN_GROUPS.forEach((g) => {
+    view.querySelector(`[data-hgroup="${g.id}"]`)?.addEventListener('click', () => {
+      historyGroup = g.id
+      view.querySelectorAll('[data-hgroup]').forEach((b) => b.classList.toggle('active', (b as HTMLElement).dataset.hgroup === historyGroup))
+      const el = view.querySelector<HTMLElement>('#history')
+      if (el) el.innerHTML = renderHistory(months, constantes)
+    })
+  })
 }
 
 function liveTotalFor(id: string, month: MonthRecord, constantes: Constantes): number {
@@ -98,7 +144,7 @@ function liveTotalFor(id: string, month: MonthRecord, constantes: Constantes): n
       return month.crypto.tradeRep + month.crypto.binance + month.crypto.ledger + usd
     }
     default:
-      return month.horsImmo.compteCourant + month.horsImmo.livrets
+      return groupTotal('horsImmo', month, constantes)
   }
 }
 

@@ -204,3 +204,63 @@ intégrité + authenticité (détection de falsification).
   JonathanMortier/patrimoine, privé).
 - docs/Patrimoine.ods conservé hors version (référence pour tests).
 - Ce plan : docs/plan.md.
+
+## 11. État d'avancement — reprise
+
+> À relire en début de session pour savoir où reprendre.
+
+### Étapes §9
+- **1 → 6 faites.** Stack Vite+TS+PWA, schéma + repos IndexedDB chiffrés,
+  double clé (PBKDF2/DEK wrappée, `crypto/security.ts`), moteur de calcul +
+  régression ODS, import TSV + réconciliation, assistant « 1er du mois »
+  + historique par domaine intégré dans **Saisie**.
+- **7 (Dashboards + Chart.js) : PAS COMMENCÉE** — priorité de reprise.
+  `chart.js ^4.5.1` déjà en dépendance. Prévoir : KPI (hors immo + variation,
+  domaines), remplissage PEA, part BTC, mois manquants, courbe évolution +
+  anneau répartition (fallback tableau si pas de `<canvas>`). NB : l'utilisateur
+  a explicitement demandé de **ne pas la démarrer** avant reprise → la proposer
+  d'abord.
+- **8 / 9 / 10 : non commencées** (écrans Crédits immo, Projection, Constantes
+  complètes ; backup Google Drive + export/import chiffré ; polissage).
+
+### Décisions & divergences vs ce plan (à jour)
+- **Comptes / Livrets** = 5 sous-comptes sommé :
+  `compteCourantCa`, `compteCourantFortuneo`, `compteCourantTradeRep`,
+  `livretA`, `ldd`. Ancien schéma `{ compteCourant, livrets }` **migré à la
+  lecture** par `normalizeMonth()` (`db/repos/months.ts`) sur `get/all`
+  (totaux préservés). Import historique : « Compte courant » → CA,
+  « Livrets » → Livret A (usage `horsImmoLiquidity()` dans
+  `calc/horsImmo.ts`, `calc/index.ts`, `import/reconcile.ts`, `views/fields.ts`,
+  `views/saisie.ts`).
+- **Assurance Vie** : plus de champ « Versements cumulés » ni APY (décision
+  utilisateur, AV uniquement) ; Bourse garde `annualizeAPY`, Crowdfunding
+  `crowdlendingApy` (colonne APY reconnue mais ignorée).
+- **Bourse** : `plusValue` (colonne « Plus value », colonne E de la feuille) —
+  renseignée pour tous les mois, informative (pas dans `bourseTotal`).
+- **Crowdfunding** : `fiscalite` saisi (sinon fallback 30 % du brut) ; total =
+  `investi + soldeDispo` (hors brut/fiscalité). Net = brut − fiscalité.
+- **Crypto** : total = comptes € + (Hot Wallet Principal § + Ledger § +
+  DeFi §) ÷ `convUsdEur`. Sous-affichage « dont X € converti de $ » + part BTC
+  en % (`btcEur` sinon `btcUsd ÷ convUsdEur`).
+- **Constantes** (`db/repos/constantes.ts`) : `convUsdEur` par défaut **1,14**
+  et **éditable dans Réglages** (migration si stocké à 1 — ancien défaut) ;
+  `btcUsd` défaut/migration **77 429 $** (prix « actuel » saisi par
+  l'utilisateur — **à rafraîchir périodiquement depuis Réglages**).
+- **Page Domaines supprimée** : l'**Historique** par domaine (segs + tableau 12
+  mois) est dans Saisie. Routes actuelles : dashboard, saisie, import,
+  credits, projection, reglages (dashboard/credits/projection = placeholders).
+- **Réglages** : carte « Conversion dollar → euro » (1 € = ? $) au-dessus du
+  changement de mot de passe ; `renderReglages` est async (appel via `.catch`).
+
+### Vérifications
+- `npx vitest run` → **105 verts** ; `npm run typecheck` ; `npm run build`
+  (tsc + vite, service worker).
+- Données de test réelles **gitignoreées** (`src/import/__fixtures__/`, déjà en
+  place sur la machine) : une régression ODS/layouts échoue sur un clone frais
+  sans fixtures → ne pas pousser de code qui briserait cela sans remarque.
+- Navigation sous happy-dom : utiliser `navigate()` (location.hash ne déclenche
+  pas `hashchange`). `fmtEuro(n, digits = 0)` → 0 décimale.
+
+### Prochaine session
+1. Proposer l'**étape 7 (Dashboard + Chart.js)** à l'utilisateur.
+2. Puis 8 (Crédits immo + Projection + Constantes complètes), 9, 10.

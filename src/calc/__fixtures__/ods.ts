@@ -92,13 +92,6 @@ export const AV_TOTAL_2026_08 = {
   total: 73467.49,
 }
 
-/** APY Assurance Vie : base G2=60992.04 @2024-08-01, invest cumulé réel. */
-export const AV_APY_POINTS = [
-  { id: '2024-09', date: '2024-09-01', total: 62531.59, investCumule: 500, apy: 20.0679677269785 },
-  { id: '2024-10', date: '2024-10-01', total: 62525.05, investCumule: 1000, apy: 5.22907928829328 },
-]
-export const AV_BASE = { date: '2024-08-01', total: 60992.04 }
-
 export interface CryptoRow {
   id: string
   tradeRep: number

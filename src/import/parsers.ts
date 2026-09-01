@@ -19,6 +19,7 @@ export const ALIASES: Record<SheetKind, Record<string, string[]>> = {
     cto: ['Action', 'CTO'],
     privateMk: ['Private Market', 'Private Market'],
     pea: ['PEA', 'PEA (ss espèces)', 'PEA ss especes'],
+    plusValue: ['Plus value', 'Plus-value'],
     total: ['Total'],
     rendement: ['Rendement PEA'],
     apy: ['APY %', 'APY'],
@@ -120,6 +121,7 @@ export function mergeDomain(month: MonthRecord, kind: SheetKind, v: Record<strin
       month.bourse.cto = pick('cto') ?? month.bourse.cto
       month.bourse.privateMk = pick('privateMk') ?? month.bourse.privateMk
       month.bourse.pea = pick('pea') ?? month.bourse.pea
+      month.bourse.plusValue = pick('plusValue') ?? month.bourse.plusValue
       break
     case 'assuranceVie':
       month.assuranceVie.livretVie = pick('livretVie') ?? month.assuranceVie.livretVie
@@ -132,6 +134,7 @@ export function mergeDomain(month: MonthRecord, kind: SheetKind, v: Record<strin
       month.crowdlending.investi = pick('investi') ?? month.crowdlending.investi
       month.crowdlending.soldeDispo = pick('soldeDispo') ?? month.crowdlending.soldeDispo
       month.crowdlending.revenuBrut = pick('revenuBrut') ?? month.crowdlending.revenuBrut
+      month.crowdlending.fiscalite = pick('fiscalite') ?? month.crowdlending.fiscalite
       break
     case 'crypto':
       month.crypto.tradeRep = pick('tradeRep') ?? month.crypto.tradeRep
@@ -143,8 +146,8 @@ export function mergeDomain(month: MonthRecord, kind: SheetKind, v: Record<strin
       month.crypto.btc = pick('btc') ?? month.crypto.btc
       break
     case 'horsImmo':
-      month.horsImmo.compteCourant = pick('compteCourant') ?? month.horsImmo.compteCourant
-      month.horsImmo.livrets = pick('livrets') ?? month.horsImmo.livrets
+      month.horsImmo.compteCourantCa = pick('compteCourant') ?? month.horsImmo.compteCourantCa
+      month.horsImmo.livretA = pick('livrets') ?? month.horsImmo.livretA
       break
   }
   return month

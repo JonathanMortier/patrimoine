@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import { horsImmoTotal, horsImmoVariation } from '../horsImmo'
 import { crowdlendingApy, crowdlendingTotals } from '../crowdlending'
-import { assuranceVieApy, assuranceVieTotal } from '../assuranceVie'
+import { assuranceVieTotal } from '../assuranceVie'
 import { cryptoTotals } from '../crypto'
 import { bourseTotal, annualizeAPY } from '../bourse'
 import { projectObjectif, withdrawalMonthly } from '../projection'
 import { monthsUnderPrincipal, pctRembourse, totals } from '../credits'
 import {
-  AV_APY_POINTS, AV_BASE, AV_TOTAL_2026_08, BOURSE, BOURSE_APY_POINTS,
+  AV_TOTAL_2026_08, BOURSE, BOURSE_APY_POINTS,
   CONV_USD_EUR, CROWD_BASE, CROWDLENDING, CREDITS_TOTALS, CRYPTO, HORS_IMMO,
   INVEST_MENSUEL_BOURSE, LOANS, PROJECTION_OBJECTIF, PROJECTION_PLUS_VALUE,
   TAUX_RENDEMENT_BOURSE,
@@ -40,7 +40,7 @@ describe('Régression ODS — Hors immo', () => {
 describe('Régression ODS — Crowdlending', () => {
   it('total = investi + solde dispo', () => {
     for (const r of CROWDLENDING) {
-      const t = crowdlendingTotals({ investi: r.investi, soldeDispo: r.soldeDispo, revenuBrut: r.revenuBrut })
+      const t = crowdlendingTotals({ investi: r.investi, soldeDispo: r.soldeDispo, revenuBrut: r.revenuBrut, fiscalite: 0 })
       expect(t.total, r.id).toBeCloseTo(r.total, 6)
     }
   })
@@ -61,15 +61,8 @@ describe('Régression ODS — Assurance Vie', () => {
       cashFortuneo: AV_TOTAL_2026_08.cashFortuneo,
       linxea: AV_TOTAL_2026_08.linxea,
       scpi: AV_TOTAL_2026_08.scpi,
-      investCumule: 0,
     })
     expect(total).toBeCloseTo(AV_TOTAL_2026_08.total, 6)
-  })
-  it('APY = (total−base−invest)/base × 365/jours (base G2, invest cumulé réel)', () => {
-    for (const p of AV_APY_POINTS) {
-      const apy = assuranceVieApy(p.total, AV_BASE.total, AV_BASE.date, p.date, p.investCumule)
-      expect(apy, p.id).toBeCloseTo(p.apy, 3)
-    }
   })
 })
 
@@ -95,7 +88,7 @@ describe('Régression ODS — Crypto', () => {
 describe('Régression ODS — Bourse', () => {
   it('Total = CTO + Private Market + PEA (mois au layout stable)', () => {
     for (const r of BOURSE) {
-      expect(bourseTotal({ cto: r.cto, privateMk: r.privateMk, pea: r.pea }), r.id).toBeCloseTo(r.total, 6)
+      expect(bourseTotal({ cto: r.cto, privateMk: r.privateMk, pea: r.pea, plusValue: 0 }), r.id).toBeCloseTo(r.total, 6)
     }
   })
   it('APY = rendement × 365/jours depuis le 1er janvier (année 2025)', () => {

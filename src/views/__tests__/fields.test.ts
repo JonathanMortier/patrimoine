@@ -19,11 +19,11 @@ describe('buildFieldsHtml', () => {
   it('génère un input pour chaque champ du schéma', () => {
     const m = newMonth('2026-08')
     m.bourse.cto = 16913.84
-    m.horsImmo.livrets = 17502.76
+    m.horsImmo.livretA = 17502.76
     const html = buildFieldsHtml(m)
     expect(html).toContain('name="bourse.cto"')
     expect(html).toContain('name="crypto.hotWalletPrincipalUSD"')
-    expect(html).toContain('name="horsImmo.livrets"')
+    expect(html).toContain('name="horsImmo.livretA"')
     expect(html).toContain('16913.84')
     expect(html).toContain('17502.76')
   })
@@ -35,12 +35,12 @@ describe('applyValues', () => {
     applyValues(m, {
       'bourse.cto': '11844',
       'bourse.pea': '29496,56',
-      'horsImmo.livrets': '',
+      'horsImmo.livretA': '',
       'crypto.btc': '0,15',
     })
     expect(m.bourse.cto).toBe(11844)
     expect(m.bourse.pea).toBeCloseTo(29496.56, 4)
-    expect(m.horsImmo.livrets).toBe(0)
+    expect(m.horsImmo.livretA).toBe(0)
     expect(m.crypto.btc).toBeCloseTo(0.15, 5)
     expect(m.id).toBe('2026-08')
   })
@@ -54,7 +54,7 @@ describe('applyValues', () => {
 describe('groupTotal', () => {
   it('totalise chaque domaine', () => {
     const m = newMonth('2026-08')
-    m.bourse = { cto: 16913.84, privateMk: 467.14, pea: 34312.95 }
+    m.bourse = { cto: 16913.84, privateMk: 467.14, pea: 34312.95, plusValue: 5038.48 }
     m.crypto = { tradeRep: 202.18, binance: 0, ledger: 6963.28, hotWalletPrincipalUSD: 7530.98, hotWalletLedgerUSD: 1744.45, defiUSD: 1740.55, btc: 0.15 }
     expect(groupTotal('bourse', m, conf)).toBeCloseTo(51693.93, 4)
     expect(groupTotal('crypto', m, conf)).toBeCloseTo(202.18 + 0 + 6963.28 + (7530.98 + 1744.45 + 1740.55) / 1.14, 4)
@@ -65,11 +65,11 @@ describe('groupTotal', () => {
 describe('monthLive', () => {
   it('reconstruit le hors immo et la variation', () => {
     const a = newMonth('2026-08')
-    a.bourse = { cto: 16913.84, privateMk: 467.14, pea: 34312.95 }
-    a.assuranceVie = { livretVie: 150.33, multiVie: 39306.06, cashFortuneo: 16370, linxea: 2491.1, scpi: 15150, investCumule: 0 }
-    a.crowdlending = { investi: 8579.92, soldeDispo: 28.58, revenuBrut: 48.88 }
+    a.bourse = { cto: 16913.84, privateMk: 467.14, pea: 34312.95, plusValue: 5038.48 }
+    a.assuranceVie = { livretVie: 150.33, multiVie: 39306.06, cashFortuneo: 16370, linxea: 2491.1, scpi: 15150 }
+    a.crowdlending = { investi: 8579.92, soldeDispo: 28.58, revenuBrut: 48.88, fiscalite: 13.84 }
     a.crypto = { tradeRep: 202.18, binance: 0, ledger: 6963.28, hotWalletPrincipalUSD: 7530.98, hotWalletLedgerUSD: 1744.45, defiUSD: 1740.55, btc: 0.15 }
-    a.horsImmo = { compteCourant: 10341.02, livrets: 17502.76 }
+    a.horsImmo = { compteCourantCa: 10341.02, compteCourantFortuneo: 0, compteCourantTradeRep: 0, livretA: 17502.76, ldd: 0 }
 
     const noPrev = monthLive(a, conf, null)
     const expected =

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { bourseTotal, annualizeAPY } from '../bourse'
-import { assuranceVieApy, assuranceVieTotal } from '../assuranceVie'
+import { assuranceVieTotal } from '../assuranceVie'
 import { crowdlendingApy, crowdlendingTotals, FISCALITE_RATE } from '../crowdlending'
 import { cryptoBtcPart, cryptoTotals } from '../crypto'
 import { horsImmoTotal, horsImmoVariation } from '../horsImmo'
@@ -36,14 +36,19 @@ describe('horsImmo', () => {
 
 describe('crowdlending', () => {
   it('total = investi + solde dispo', () => {
-    const t = crowdlendingTotals({ investi: 7000, soldeDispo: 300, revenuBrut: 50 })
+    const t = crowdlendingTotals({ investi: 7000, soldeDispo: 300, revenuBrut: 50, fiscalite: 0 })
     expect(t.total).toBe(7300)
   })
   it("fiscalité = 30 % du brut, net = brut − fisc", () => {
-    const t = crowdlendingTotals({ investi: 0, soldeDispo: 0, revenuBrut: 100 })
+    const t = crowdlendingTotals({ investi: 0, soldeDispo: 0, revenuBrut: 100, fiscalite: 0 })
     expect(FISCALITE_RATE).toBe(0.3)
     expect(t.fiscalite).toBe(30)
     expect(t.net).toBe(70)
+  })
+  it('fiscalité saisie : net = brut − fiscalité', () => {
+    const t = crowdlendingTotals({ investi: 0, soldeDispo: 0, revenuBrut: 11.33, fiscalite: 2.5 })
+    expect(t.fiscalite).toBe(2.5)
+    expect(t.net).toBeCloseTo(8.83, 6)
   })
   it('apy : (total−base)/base × 365/jours', () => {
     expect(crowdlendingApy(7760, 7600, '2025-03-01', '2025-04-01')).toBeCloseTo(((7760 - 7600) / 7600) * 100 * (365 / 31), 8)
@@ -54,11 +59,7 @@ describe('crowdlending', () => {
 
 describe('assuranceVie', () => {
   it('total = somme des comptes', () => {
-    expect(assuranceVieTotal({ livretVie: 10, multiVie: 20, cashFortuneo: 30, linxea: 40, scpi: 50, investCumule: 0 })).toBe(150)
-  })
-  it('apy : (total−base−invest)/base × 365/jours', () => {
-    const apy = assuranceVieApy(62531.59, 60992.04, '2024-08-01', '2024-09-01', 500)
-    expect(apy).toBeCloseTo(((62531.59 - 60992.04 - 500) / 60992.04) * 100 * (365 / 31), 6)
+    expect(assuranceVieTotal({ livretVie: 10, multiVie: 20, cashFortuneo: 30, linxea: 40, scpi: 50 })).toBe(150)
   })
 })
 
@@ -75,7 +76,7 @@ describe('crypto', () => {
 
 describe('bourse', () => {
   it('total = CTO + Private Market + PEA', () => {
-    expect(bourseTotal({ cto: 100, privateMk: 200, pea: 300 })).toBe(600)
+    expect(bourseTotal({ cto: 100, privateMk: 200, pea: 300, plusValue: 0 })).toBe(600)
   })
   it('apy = rendement × 365/jours depuis le 1er janvier', () => {
     expect(annualizeAPY(-2.39730272109317, 120)).toBeCloseTo(-2.39730272109317 * (365 / 120), 8)
@@ -142,11 +143,11 @@ describe('computeDerivedMonth (intégration)', () => {
   it('reconstruit les totaux et le hors immo', () => {
     const month: MonthRecord = {
       id: '2026-08',
-      bourse: { cto: 16913.84, privateMk: 467.14, pea: 34312.95 },
-      assuranceVie: { livretVie: 150.33, multiVie: 39306.06, cashFortuneo: 16370, linxea: 2491.1, scpi: 15150, investCumule: 0 },
-      crowdlending: { investi: 8525.37, soldeDispo: 10.21, revenuBrut: 48.88 },
+      bourse: { cto: 16913.84, privateMk: 467.14, pea: 34312.95, plusValue: 5038.48 },
+      assuranceVie: { livretVie: 150.33, multiVie: 39306.06, cashFortuneo: 16370, linxea: 2491.1, scpi: 15150 },
+      crowdlending: { investi: 8525.37, soldeDispo: 10.21, revenuBrut: 48.88, fiscalite: 13.84 },
       crypto: { tradeRep: 202.18, binance: 0, ledger: 6963.28, hotWalletPrincipalUSD: 7530.98, hotWalletLedgerUSD: 1744.45, defiUSD: 1740.55, btc: 0.15 },
-      horsImmo: { compteCourant: 10341.02, livrets: 17502.76 },
+      horsImmo: { compteCourantCa: 10341.02, compteCourantFortuneo: 0, compteCourantTradeRep: 0, livretA: 17502.76, ldd: 0 },
     }
     const d = computeDerivedMonth(month, C, 179103.49)
     expect(d.bourse).toBeCloseTo(51693.93, 6)
