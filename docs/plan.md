@@ -210,18 +210,22 @@ intégrité + authenticité (détection de falsification).
 > À relire en début de session pour savoir où reprendre.
 
 ### Étapes §9
-- **1 → 6 faites.** Stack Vite+TS+PWA, schéma + repos IndexedDB chiffrés,
+- **1 → 7 faites.** Stack Vite+TS+PWA, schéma + repos IndexedDB chiffrés,
   double clé (PBKDF2/DEK wrappée, `crypto/security.ts`), moteur de calcul +
   régression ODS, import TSV + réconciliation, assistant « 1er du mois »
-  + historique par domaine intégré dans **Saisie**.
-- **7 (Dashboards + Chart.js) : PAS COMMENCÉE** — priorité de reprise.
-  `chart.js ^4.5.1` déjà en dépendance. Prévoir : KPI (hors immo + variation,
-  domaines), remplissage PEA, part BTC, mois manquants, courbe évolution +
-  anneau répartition (fallback tableau si pas de `<canvas>`). NB : l'utilisateur
-  a explicitement demandé de **ne pas la démarrer** avant reprise → la proposer
-  d'abord.
-- **8 / 9 / 10 : non commencées** (écrans Crédits immo, Projection, Constantes
-  complètes ; backup Google Drive + export/import chiffré ; polissage).
+  + historique par domaine intégré dans **Saisie**, **Dashboard + graphiques
+  Chart.js** (`views/dashboard.ts` : KPI hors immo/brut/net avec variation,
+  remplissage PEA, part BTC brut/net/hors-immo, mois manquants, courbe
+  évolution + anneau répartition, tableau de repli si pas de `<canvas>`).
+- **8 : partielle.** **Crédits immo** (écran complet `views/credits.ts` :
+  tableau transposé par propriété/numéro, sous-totaux, total, % remboursé,
+  palier 250 k€, colonnes masquables) + **Constantes complètes éditables dans
+  Réglages** (voir §Décisions : plafond PEA, prix BTC €/$, taux rendement,
+  mensualités Trade Rep/Fortuneo, date ouverture PEA, conversion, + bouton
+  « Récupérer les prix en ligne »). **Projection Bourse (écran) : NON faite**
+  (moteur `calc/projection.ts` déjà testé par la régression ODS).
+- **9 / 10 : non commencées** (backup Google Drive + export/import chiffré ;
+  polissage).
 
 ### Décisions & divergences vs ce plan (à jour)
 - **Comptes / Livrets** = 5 sous-comptes sommé :
@@ -243,24 +247,46 @@ intégrité + authenticité (détection de falsification).
   DeFi §) ÷ `convUsdEur`. Sous-affichage « dont X € converti de $ » + part BTC
   en % (`btcEur` sinon `btcUsd ÷ convUsdEur`).
 - **Constantes** (`db/repos/constantes.ts`) : `convUsdEur` par défaut **1,14**
-  et **éditable dans Réglages** (migration si stocké à 1 — ancien défaut) ;
-  `btcUsd` défaut/migration **77 429 $** (prix « actuel » saisi par
-  l'utilisateur — **à rafraîchir périodiquement depuis Réglages**).
+  (migration si stocké à 1 — ancien défaut) ; `btcUsd` défaut/migration
+  **77 429 $** ; le prix est « actuel » et saisi par l'utilisateur — **à
+  rafraîchir périodiquement depuis Réglages** (bouton en ligne).
 - **Page Domaines supprimée** : l'**Historique** par domaine (segs + tableau 12
   mois) est dans Saisie. Routes actuelles : dashboard, saisie, import,
-  credits, projection, reglages (dashboard/credits/projection = placeholders).
-- **Réglages** : carte « Conversion dollar → euro » (1 € = ? $) au-dessus du
+  credits, projection, reglages (dashboard/credits fonctionnels, projection =
+  placeholder).
+- **Réglages** : carte « Constantes » (conversion €/$, plafond PEA, prix BTC €/$
+  `btcEur` optionnel sinon calculé `btcUsd ÷ convUsdEur`, taux rendement
+  `% → /100`, mensualités Trade Rep/Fortuneo, date ouverture PEA) + bouton
+  **« Récupérer les prix en ligne »** (pré-remplit conversion + prix BTC depuis
+  `src/utils/market.ts` — ER-API + CoinGecko, sans clé ni enregistrement ;
+  champs toujours modifiables ; appels indépendants : réussite partielle OK) +
   changement de mot de passe ; `renderReglages` est async (appel via `.catch`).
+- **Validation des champs Constantes** : les champs qui reçoivent des valeurs à
+  précision arbitraire (`convUsdEur`, `btcUsd`, `btcEur`, `tauxRendement`)
+  sont en `step="any"` — sinon la validation native HTML5 bloque (ex. taux
+  `7,25` non-multiple de `0.1`, conversion à 4 décimales non-multiple de
+  `0.01`). La garde réelle est la validation JS (nombre fini, ≥ 0 ; conv > 0).
 
 ### Vérifications
-- `npx vitest run` → **105 verts** ; `npm run typecheck` ; `npm run build`
+- `npx vitest run` → **145 verts / 147** ; `npm run typecheck` ; `npm run build`
   (tsc + vite, service worker).
+  - **2 échecs pré-existants non liés** dans `views/__tests__/navigation-seeded.test.ts`
+    (sauvegarde du « crédit restant » dans Saisie) — présents avant ce travail,
+    confirmés en revertant la partie Constantes.
+- Tests spécifiques Constantes/marché : `views/__tests__/reglages.test.ts`,
+  `utils/__tests__/market.test.ts` (fetch moké, réussite partielle, échec total).
 - Données de test réelles **gitignoreées** (`src/import/__fixtures__/`, déjà en
   place sur la machine) : une régression ODS/layouts échoue sur un clone frais
   sans fixtures → ne pas pousser de code qui briserait cela sans remarque.
 - Navigation sous happy-dom : utiliser `navigate()` (location.hash ne déclenche
-  pas `hashchange`). `fmtEuro(n, digits = 0)` → 0 décimale.
+  pas `hashchange`). `fmtEuro(n, digits = 0)` → 0 décimale. Dans les tests, un
+  `requestSubmit()`/clic de bouton `type=submit` ne déclenche pas l'événement
+  `submit` sous happy-dom → dispatcher `new Event('submit', { bubbles, cancelable })`
+  sur le formulaire.
 
 ### Prochaine session
-1. Proposer l'**étape 7 (Dashboard + Chart.js)** à l'utilisateur.
-2. Puis 8 (Crédits immo + Projection + Constantes complètes), 9, 10.
+1. **Terminer l'étape 8** : écran **Projection Bourse** (moteur
+   `calc/projection.ts` prêt + testé régression ODS : objectif 7 %, invest
+   mensuel, retrait 4 %, plus-value ; chart + tableau de repli).
+2. **9 / 10** : backup Google Drive chiffré + export/import chiffré ; polissage
+   responsive mobile + validation finale.

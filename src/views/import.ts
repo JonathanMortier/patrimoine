@@ -1,14 +1,17 @@
 import { monthRepo, newMonth } from '../db/repos/months'
 import { constantesRepo } from '../db/repos/constantes'
+import { creditsRepo } from '../db/repos/credits'
 import { parseSheet, mergeDomain, type ParseResult, type SheetKind, formatMoney } from '../import/parsers'
+import { parseCreditSheet, toLoan, type CreditLoanInput } from '../import/credits'
 import { reconcileMonths, formatReconDiff } from '../import/reconcile'
 
-const KINDS: { id: SheetKind; label: string }[] = [
+const KINDS: { id: SheetKind | 'credits'; label: string }[] = [
   { id: 'horsImmo', label: 'Hors immo' },
   { id: 'bourse', label: 'Bourse' },
   { id: 'assuranceVie', label: 'Assurance Vie' },
   { id: 'crowdlending', label: 'Crowdfunding' },
   { id: 'crypto', label: 'Crypto' },
+  { id: 'credits', label: 'Crédits immo' },
 ]
 
 /** Totaux hors immo saisis (colonne « Total » de la feuille Hors immo),
@@ -16,7 +19,8 @@ const KINDS: { id: SheetKind; label: string }[] = [
 const sourceTotals = new Map<string, number>()
 
 let pending: ParseResult | null = null
-let currentKind: SheetKind = 'horsImmo'
+let pendingCredits: CreditLoanInput[] | null = null
+let currentKind: SheetKind | 'credits' = 'horsImmo'
 
 export function renderImport(view: HTMLElement): void {
   view.innerHTML = `
@@ -26,7 +30,9 @@ export function renderImport(view: HTMLElement): void {
         Collez, pour chaque feuille, son contenu exporté en CSV/TSV. Les données
         sont écrites <strong>chiffrées</strong> dans IndexedDB (une ligne par mois,
         regroupée par domaine). Feuilles acceptées : Hors immo, Bourse, Assurance
-        Vie, Crowdlending, Crypto — mise en page actuelle.
+        Vie, Crowdlending, Crypto — mise en page actuelle. L'onglet
+        <strong>Crédits immo</strong> importe la liste des prêts (seul le Restant
+        est modifiable ensuite).
       </p>
     </section>
 
@@ -67,6 +73,7 @@ export function renderImport(view: HTMLElement): void {
     view.querySelector(`[data-kind="${k.id}"]`)!.addEventListener('click', () => {
       currentKind = k.id
       pending = null
+      pendingCredits = null
       renderImport(view)
       ;(view.querySelector('#csv-input') as HTMLTextAreaElement).focus()
     })
@@ -91,6 +98,10 @@ function msg(view: HTMLElement, text: string, ok = false): HTMLElement {
 
 function analyse(view: HTMLElement): void {
   const input = view.querySelector<HTMLTextAreaElement>('#csv-input')!
+  if (currentKind === 'credits') {
+    analyseCredits(view, input.value)
+    return
+  }
   try {
     pending = parseSheet(input.value, currentKind)
   } catch (err) {
@@ -112,6 +123,50 @@ function analyse(view: HTMLElement): void {
   preview.innerHTML = renderPreview(display)
 }
 
+function analyseCredits(view: HTMLElement, text: string): void {
+  const preview = view.querySelector<HTMLElement>('#preview')!
+  const importBtn = view.querySelector<HTMLButtonElement>('#import')!
+  let result
+  try {
+    result = parseCreditSheet(text)
+  } catch (err) {
+    msg(view, `Analyse impossible : ${(err as Error).message}`)
+    preview.hidden = true
+    importBtn.disabled = true
+    return
+  }
+  const loans = result.loans.filter((l): l is CreditLoanInput => l !== null)
+  pendingCredits = loans
+  if (loans.length === 0) {
+    preview.hidden = true
+    importBtn.disabled = true
+    msg(view, 'Aucun crédit reconnu. Vérifiez le séparateur et que la colonne « Numéro crédit » est présente.')
+    return
+  }
+  msg(view, `${loans.length} prêt(s) détecté(s) (${result.skipped.length} ligne(s) ignorée(s)). Relu la liste et cliquez « Importer ».`, true)
+  importBtn.disabled = false
+  preview.hidden = false
+  preview.innerHTML = renderCreditPreview(loans)
+}
+
+function renderCreditPreview(loans: CreditLoanInput[]): string {
+  const head = '<tr><th>Maison</th><th>N° crédit</th><th>Départ</th><th>Fin</th><th>Taux</th><th>Mensualité</th><th>Total</th><th>Restant</th><th>% remb.</th></tr>'
+  const body = loans
+    .map((l) => `<tr>
+      <td>${l.nom}</td>
+      <td>${l.numero}</td>
+      <td>${l.dateDepart ?? '—'}</td>
+      <td>${l.dateFin ?? '—'}</td>
+      <td>${l.taux === null ? '—' : `${(l.taux * 100).toFixed(2).replace('.', ',')} %`}</td>
+      <td>${formatMoney(l.mensualite ?? undefined)}</td>
+      <td>${formatMoney(l.montant ?? undefined)}</td>
+      <td>${formatMoney(l.restant ?? undefined)}</td>
+      <td>${l.pctRembourse === null ? '—' : `${l.pctRembourse.toFixed(2).replace('.', ',')} %`}</td>
+    </tr>`).join('')
+  return `<h2>Aperçu (${loans.length} prêts)</h2>
+    <div class="table-wrap"><table class="grid"><thead>${head}</thead><tbody>${body}</tbody></table></div>`
+}
+
 function renderPreview(r: ParseResult): string {
   if (r.columns.length === 0) {
     return `<h2>Aperçu</h2><p class="muted">Aucune colonne reconnue pour « ${kindLabel()} ».</p>`
@@ -127,6 +182,10 @@ function renderPreview(r: ParseResult): string {
 }
 
 async function doImport(view: HTMLElement): Promise<void> {
+  if (currentKind === 'credits') {
+    await doImportCredits(view)
+    return
+  }
   if (!pending) return
   let touched = 0
   try {
@@ -145,6 +204,21 @@ async function doImport(view: HTMLElement): Promise<void> {
   }
   msg(view, `${touched} mois importés pour « ${kindLabel()} » (${pending.skipped.length} ligne(s) ignorée(s)). Données chiffrées à l'écriture.`, true)
   pending = null
+  renderImport(view)
+}
+
+async function doImportCredits(view: HTMLElement): Promise<void> {
+  if (!pendingCredits) return
+  try {
+    for (const input of pendingCredits) {
+      await creditsRepo.save(toLoan(input))
+    }
+  } catch (err) {
+    msg(view, `Import échoué (verrouillé ?) : ${(err as Error).message}`)
+    return
+  }
+  msg(view, `${pendingCredits.length} prêt(s) importé(s) dans « Crédits immo ». Vous pouvez ajuster le Restant depuis l'onglet Crédits.`, true)
+  pendingCredits = null
   renderImport(view)
 }
 

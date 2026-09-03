@@ -1,5 +1,5 @@
 export const DB_NAME = 'patrimoine'
-export const DB_VERSION = 2
+export const DB_VERSION = 3
 
 export const STORES = {
   months: 'months',
@@ -18,6 +18,7 @@ export interface MonthRecord {
   crowdlending: CrowdlendingSnapshot
   crypto: CryptoSnapshot
   horsImmo: HorsImmoSnapshot
+  creditsRestant?: Record<string, number> // clé loanKey(nom-numero) → restant du mois
 }
 
 export interface BourseSnapshot {

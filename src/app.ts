@@ -3,6 +3,8 @@ import { emitAuthEvent } from './events'
 import { renderReglages } from './views/reglages'
 import { renderImport } from './views/import'
 import { renderSaisie } from './views/saisie'
+import { renderDashboard } from './views/dashboard'
+import { renderCredits } from './views/credits'
 
 export type Route = 'dashboard' | 'saisie' | 'import' | 'credits' | 'projection' | 'reglages'
 
@@ -83,6 +85,16 @@ function render(): void {
   const active = currentRoute()
 
   rootTabs().forEach((btn) => btn.classList.toggle('active', btn.dataset.route === active))
+
+  if (active === 'credits') {
+    void renderCredits(view).catch((err) => showRenderError(view, err))
+    return
+  }
+
+  if (active === 'dashboard') {
+    void renderDashboard(view).catch((err) => showRenderError(view, err))
+    return
+  }
 
   if (active === 'reglages') {
     void renderReglages(view).catch((err) => showRenderError(view, err))

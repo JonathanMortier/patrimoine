@@ -37,9 +37,9 @@ describe('navigation par onglets', () => {
     mountApp(document.getElementById('app')!)
   })
 
-  it('affiche le dashboard au démarrage', () => {
+  it('affiche le dashboard au démarrage', async () => {
     expect(location.hash).toBe('')
-    expect(view().textContent).toContain('Dashboard')
+    await waitContent('Aucun mois enregistré')
   })
 
   it('reconnaît la route active dans la barre du bas', () => {
@@ -59,7 +59,7 @@ describe('navigation par onglets', () => {
   it('navigue vers Saisie et rend l’historique par domaine', async () => {
     tabFor('saisie').click()
     await waitContent('Historique')
-    expect(view().querySelectorAll('.seg').length).toBe(5)
+    expect(view().querySelectorAll('.seg').length).toBe(6)
     expect(view().textContent).toContain('Aucun mois enregistré')
   })
 
@@ -67,7 +67,7 @@ describe('navigation par onglets', () => {
     tabFor('saisie').click()
     await waitContent('Assistant')
     tabFor('dashboard').click()
-    await waitContent('Dashboard')
+    await waitContent('Aucun mois enregistré')
   })
 
   it('affiche un message d’erreur clair quand l’écran ne peut pas s’afficher (session verrouillée)', async () => {

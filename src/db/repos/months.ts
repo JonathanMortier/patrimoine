@@ -20,6 +20,7 @@ export function emptyMonth(): MonthRecord {
     crowdlending: { investi: 0, soldeDispo: 0, revenuBrut: 0, fiscalite: 0 },
     crypto: { tradeRep: 0, binance: 0, ledger: 0, hotWalletPrincipalUSD: 0, hotWalletLedgerUSD: 0, defiUSD: 0, btc: 0 },
     horsImmo: { compteCourantCa: 0, compteCourantFortuneo: 0, compteCourantTradeRep: 0, livretA: 0, ldd: 0 },
+    creditsRestant: {},
   }
 }
 
@@ -52,6 +53,7 @@ export function normalizeMonth(record: MonthRecord): MonthRecord {
     crowdlending: { ...base.crowdlending, ...(record.crowdlending ?? {}) },
     crypto: { ...base.crypto, ...(record.crypto ?? {}) },
     horsImmo,
+    creditsRestant: record.creditsRestant ?? {},
   }
 }
 

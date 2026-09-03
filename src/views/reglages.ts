@@ -1,20 +1,69 @@
 import { changePassword, PasswordError, LockedError } from '../crypto/security'
 import { constantesRepo } from '../db/repos/constantes'
+import type { Constantes } from '../db/schema'
 import { fmtAmount } from '../utils/format'
+import { fetchMarketPrices, MarketFetchError } from '../utils/market'
+
+type FieldDef = {
+  key: keyof Constantes
+  label: string
+  type?: 'number' | 'date'
+  step?: string
+  min?: string
+  suffix?: string
+  hint?: string
+}
+
+const NUMBER_FIELDS: FieldDef[] = [
+  { key: 'plafondPea', label: 'Plafond PEA (€)', step: '100', min: '0', hint: 'Montant maximal d’un PEA. Sert à calculer le remplissage du PEA.' },
+  { key: 'btcUsd', label: 'Prix du BTC (USD)', step: 'any', min: '0', hint: 'Prix « actuel » du bitcoin en $. Utilisé pour la part BTC.' },
+  { key: 'btcEur', label: 'Prix du BTC (EUR)', step: 'any', min: '0', hint: 'Optionnel : sinon calculé à partir du prix $ et de la conversion.' },
+  { key: 'tauxRendement', label: 'Taux de rendement annuel (%)', type: 'number', step: 'any', min: '0', hint: 'Ex. 7 % pour la projection Bourse.' },
+  { key: 'mensualiteTradeRep', label: 'Mensualité Trade Republic (€/mois)', step: '10', min: '0' },
+  { key: 'mensualiteFortuneo', label: 'Mensualité Fortuneo (€/mois)', step: '10', min: '0' },
+]
+
+const DATE_FIELDS: FieldDef[] = [
+  { key: 'dateOuverturePea', label: 'Date d\u2019ouverture du PEA', type: 'date' },
+]
+
+const CONV_FIELD: FieldDef = { key: 'convUsdEur', label: '1 € = ? $', step: 'any', min: '0.0001', hint: 'Les wallets en $ de la section Crypto sont convertis via « 1 € = X $ ».' }
 
 export async function renderReglages(view: HTMLElement): Promise<void> {
   const constantes = await constantesRepo.get()
 
+  const numberFieldHtml = (def: FieldDef): string => `
+    <label class="field">
+      <span>${def.label}${def.hint ? ` — <em>${def.hint}</em>` : ''}</span>
+      <input type="number" inputmode="decimal" name="${def.key}" step="${def.step ?? 'any'}" min="${def.min ?? '0'}"
+        value="${fmtAmount(constantes[def.key] as number)}" ${def.suffix ? `data-suffix="${def.suffix}"` : ''} />
+    </label>`
+
+  const dateFieldHtml = (def: FieldDef): string => `
+    <label class="field">
+      <span>${def.label}</span>
+      <input type="date" name="${def.key}" value="${constantes[def.key] as string}" />
+    </label>`
+
+  const convHtml = `
+    <label class="field">
+      <span>${CONV_FIELD.label}${CONV_FIELD.hint ? ` — <em>${CONV_FIELD.hint}</em>` : ''}</span>
+      <input type="number" inputmode="decimal" name="convUsdEur" step="${CONV_FIELD.step}" min="${CONV_FIELD.min}"
+        value="${fmtAmount(constantes.convUsdEur)}" />
+    </label>`
+
   view.innerHTML = `
-    <section class="card" id="conv-card">
-      <h2>Conversion dollar → euro</h2>
-      <p class="muted">Les wallets en $ de la section Crypto sont convertis via « 1 € = X $ ».</p>
-      <label class="field">
-        <span>1 € = ? $</span>
-        <input type="number" inputmode="decimal" step="0.01" min="0.0001" name="convUsdEur" value="${fmtAmount(constantes.convUsdEur)}" />
-      </label>
-      <button id="save-conv" class="primary">Enregistrer la conversion</button>
-      <p class="msg" aria-live="polite"></p>
+    <section class="card" id="const-card">
+      <h2>Constantes</h2>
+      <p class="muted">Réglages utilisés par les calculs (remplissage PEA, part BTC, projection, crypto…).</p>
+      <form id="const-form" autocomplete="off">
+        ${convHtml}
+        ${NUMBER_FIELDS.map(numberFieldHtml).join('')}
+        ${DATE_FIELDS.map(dateFieldHtml).join('')}
+        <button type="button" id="fetch-market" class="ghost">🌐 Récupérer les prix en ligne</button>
+        <button type="submit" class="primary">Enregistrer les constantes</button>
+        <p class="msg" aria-live="polite"></p>
+      </form>
     </section>
 
     <section class="card">
@@ -39,23 +88,75 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
     </section>
   `
 
-  const convMsg = view.querySelector<HTMLParagraphElement>('#conv-card .msg')!
-  view.querySelector('#save-conv')!.addEventListener('click', async () => {
-    const raw = (view.querySelector('[name=convUsdEur]') as HTMLInputElement).value.trim().replace(',', '.')
-    const n = parseFloat(raw)
-    if (!Number.isFinite(n) || n <= 0) {
-      convMsg.textContent = 'Conversion invalide (nombre strictement positif).'
-      convMsg.className = 'msg err'
+  const constMsg = view.querySelector<HTMLParagraphElement>('#const-form .msg')!
+  const fetchBtn = view.querySelector<HTMLButtonElement>('#fetch-market')!
+  const setField = (name: string, value: string) => {
+    const el = view.querySelector<HTMLInputElement>(`[name=${name}]`)
+    if (el) el.value = value
+  }
+  fetchBtn.addEventListener('click', async () => {
+    fetchBtn.disabled = true
+    fetchBtn.textContent = 'Récupération en cours…'
+    constMsg.className = 'msg'
+    constMsg.textContent = ''
+    try {
+      const prices = await fetchMarketPrices()
+      if ('convUsdEur' in prices) setField('convUsdEur', fmtAmount(prices.convUsdEur))
+      if ('btcUsd' in prices) setField('btcUsd', fmtAmount(prices.btcUsd))
+      if ('btcEur' in prices) setField('btcEur', fmtAmount(prices.btcEur))
+      const parts = [
+        'convUsdEur' in prices ? `1 € = ${fmtAmount(prices.convUsdEur)} $` : null,
+        'btcUsd' in prices ? `BTC ${fmtAmount(prices.btcUsd)} $` : null,
+        'btcEur' in prices ? `BTC ${fmtAmount(prices.btcEur)} €` : null,
+      ].filter(Boolean)
+      constMsg.textContent = `Prix récupérés : ${parts.join(' · ')}. Pensez à enregistrer.`
+      constMsg.className = 'msg ok'
+    } catch (err) {
+      constMsg.textContent = err instanceof MarketFetchError ? err.message : 'Récupération impossible.'
+      constMsg.className = 'msg err'
+    } finally {
+      fetchBtn.disabled = false
+      fetchBtn.textContent = '🌐 Récupérer les prix en ligne'
+    }
+  })
+
+  view.querySelector('#const-form')!.addEventListener('submit', async (ev) => {
+    ev.preventDefault()
+    const getNum = (key: string): number => {
+      const el = view.querySelector<HTMLInputElement>(`[name=${key}]`)
+      const raw = (el?.value ?? '').trim().replace(',', '.')
+      return raw === '' ? 0 : parseFloat(raw)
+    }
+    const getDate = (key: string): string => {
+      const el = view.querySelector<HTMLInputElement>(`[name=${key}]`)
+      return (el?.value ?? '').trim()
+    }
+
+    const next: Constantes = {
+      ...(await constantesRepo.get()),
+      convUsdEur: getNum('convUsdEur'),
+      plafondPea: getNum('plafondPea'),
+      btcUsd: getNum('btcUsd'),
+      btcEur: getNum('btcEur'),
+      tauxRendement: getNum('tauxRendement') / 100,
+      mensualiteTradeRep: getNum('mensualiteTradeRep'),
+      mensualiteFortuneo: getNum('mensualiteFortuneo'),
+      dateOuverturePea: getDate('dateOuverturePea'),
+    }
+
+    if (!Number.isFinite(next.convUsdEur) || next.convUsdEur <= 0) {
+      constMsg.textContent = 'Conversion invalide (nombre strictement positif).'
+      constMsg.className = 'msg err'
       return
     }
+
     try {
-      const current = await constantesRepo.get()
-      await constantesRepo.save({ ...current, convUsdEur: n })
-      convMsg.textContent = `Conversion enregistrée : 1 € = ${fmtAmount(n)} $`
-      convMsg.className = 'msg ok'
+      await constantesRepo.save(next)
+      constMsg.textContent = 'Constantes enregistrées.'
+      constMsg.className = 'msg ok'
     } catch (err) {
-      convMsg.textContent = err instanceof LockedError ? err.message : 'Enregistrement impossible (session verrouillée ?).'
-      convMsg.className = 'msg err'
+      constMsg.textContent = err instanceof LockedError ? err.message : 'Enregistrement impossible (session verrouillée ?).'
+      constMsg.className = 'msg err'
     }
   })
 

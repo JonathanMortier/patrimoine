@@ -3,6 +3,7 @@ import { deleteDb } from '../index'
 import { monthRepo, newMonth } from '../repos/months'
 import { constantesRepo, DEFAULT_CONSTANTES } from '../repos/constantes'
 import { creditsRepo, loanKey } from '../repos/credits'
+import { creditsPrefsRepo } from '../repos/creditsPrefs'
 import { patrimoineRepo } from '../repos/patrimoine'
 import type { Loan, MonthRecord } from '../schema'
 
@@ -139,6 +140,20 @@ describe('repositories', () => {
 
       await patrimoineRepo.remove('livretA')
       expect(await patrimoineRepo.get('livretA')).toBeUndefined()
+    })
+  })
+
+  describe('creditsPrefsRepo', () => {
+    it('returns empty defaults when nothing is saved', async () => {
+      expect((await creditsPrefsRepo.get()).hiddenAttrs).toEqual([])
+    })
+
+    it('saves and re-reads hidden attributes', async () => {
+      await creditsPrefsRepo.save({ hiddenAttrs: ['depart', 'taux'] })
+      expect((await creditsPrefsRepo.get()).hiddenAttrs).toEqual(['depart', 'taux'])
+
+      await creditsPrefsRepo.save({ hiddenAttrs: [] })
+      expect((await creditsPrefsRepo.get()).hiddenAttrs).toEqual([])
     })
   })
 })

@@ -403,3 +403,108 @@ table.grid th {
   font-weight: 600;
   white-space: nowrap;
 }
+
+/* Dashboard */
+.chart-box {
+  position: relative;
+  height: 220px;
+  width: 100%;
+}
+
+.chart-box-donut {
+  height: 200px;
+}
+
+.meter {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.meter span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.add-prop {
+  gap: 8px;
+}
+
+.add-prop input {
+  flex: 1;
+  min-width: 0;
+}
+
+table.grid .prop-val {
+  width: 110px;
+  padding: 4px 6px;
+}
+
+/* Crédits immo — tableau transposé (attributs en lignes, prêts en colonnes) */
+table.grid.transposed th.row-label {
+  text-align: left;
+  color: var(--muted);
+  white-space: nowrap;
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  box-shadow: 1px 0 0 var(--border);
+  z-index: 1;
+}
+
+table.grid.transposed tr.hidden {
+  display: none;
+}
+
+table.grid.transposed th.col-sub,
+table.grid.transposed td.sub-content {
+  background: var(--surface-2);
+}
+
+table.grid.transposed th.col-grand,
+table.grid.transposed td.grand-content {
+  background: var(--surface-3);
+  font-weight: 600;
+}
+
+table.grid.transposed td.sub-content,
+table.grid.transposed td.grand-content,
+table.grid.transposed th.col-sub,
+table.grid.transposed th.col-grand {
+  color: inherit;
+}
+
+table.grid.transposed th.col-sub,
+table.grid.transposed th.col-grand {
+  font-weight: 600;
+  text-align: right;
+}
+
+.unchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.unchips .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.unchips .chip input {
+  margin: 0;
+  accent-color: var(--accent);
+}

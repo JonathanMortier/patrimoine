@@ -1,24 +1,32 @@
 import { monthRepo, newMonth } from '../db/repos/months'
 import { constantesRepo } from '../db/repos/constantes'
+import { creditsRepo, loanKey } from '../db/repos/credits'
 import { compareMonthIds, currentMonthId, formatMonthLabel, nextAfterIds } from '../utils/date'
-import type { Constantes, MonthRecord } from '../db/schema'
+import type { Constantes, Loan, MonthRecord } from '../db/schema'
 import {
   DOMAIN_GROUPS,
   collectMonth,
   summaryHtml,
   monthLive,
   groupTotal,
+  parseAmount,
   type DomainKey,
   type MonthLive,
 } from './fields'
 import { fmtEuro } from '../utils/format'
 
+const CREDITS_GROUP_ID = 'creditsRestant'
+
 let targetMonth = ''
-let historyGroup: DomainKey = 'bourse'
+let historyGroup: DomainKey | typeof CREDITS_GROUP_ID = 'bourse'
 
 export async function renderSaisie(view: HTMLElement): Promise<void> {
-  const constantes = await constantesRepo.get()
-  const months = (await monthRepo.all()).sort((a, b) => compareMonthIds(a.id, b.id))
+  const [constantes, months, loans] = await Promise.all([
+    constantesRepo.get(),
+    monthRepo.all(),
+    creditsRepo.all(),
+  ])
+  const loansSorted = [...loans].sort((a, b) => a.nom.localeCompare(b.nom) || a.numero - b.numero)
   const ids = months.map((m) => m.id)
   if (!targetMonth || !ids.concat([currentMonthId()]).includes(targetMonth)) {
     targetMonth = nextAfterIds(ids)
@@ -35,6 +43,23 @@ export async function renderSaisie(view: HTMLElement): Promise<void> {
   const prev = months.filter((m) => compareMonthIds(m.id, targetMonth) < 0).at(-1)
   const base = months.find((m) => m.id === targetMonth) ?? newMonth(targetMonth)
   base.id = targetMonth
+
+  const creditsRestant = base.creditsRestant ?? {}
+  const creditsFields = loansSorted
+    .map((l) => {
+      const key = loanKey(l)
+      const v = creditsRestant[key] ?? l.restant
+      return `<label class="field"><span>${l.nom} — N°${l.numero}</span><input type="number" inputmode="decimal" step="0.01" name="creditsRestant.${key}" data-credit-key="${key}" value="${String(v)}" /></label>`
+    })
+    .join('')
+  const creditsStepTotal = loansSorted.reduce((a, l) => a + (creditsRestant[loanKey(l)] ?? l.restant), 0)
+  const creditsStep = loansSorted.length === 0
+    ? `<section class="card step" data-step="${DOMAIN_GROUPS.length + 1}"><div class="step-head"><span class="badge">${DOMAIN_GROUPS.length + 1}</span><h2>Crédit restant</h2></div><p class="muted">Aucun crédit enregistré. Importez vos prêts dans « Import » puis « Crédits ».</p></section>`
+    : `<section class="card step" data-step="${DOMAIN_GROUPS.length + 1}">
+        <div class="step-head"><span class="badge">${DOMAIN_GROUPS.length + 1}</span><h2>Crédit restant</h2><span class="step-total" id="step-total-${CREDITS_GROUP_ID}">${fmtEuro(creditsStepTotal)}</span></div>
+        <p class="muted">Restant dû de chaque crédit à la fin du mois saisi.</p>
+        <div class="grid2">${creditsFields}</div>
+      </section>`
 
   view.innerHTML = `
     <section class="card">
@@ -75,12 +100,14 @@ export async function renderSaisie(view: HTMLElement): Promise<void> {
             </div>
           </section>`
       }).join('')}
+      ${creditsStep}
     </div>
 
     <section class="card">
       <h2>Historique</h2>
       <div class="segs" role="tablist">
         ${DOMAIN_GROUPS.map((g) => `<button class="seg ${g.id === historyGroup ? 'active' : ''}" data-hgroup="${g.id}">${g.label}</button>`).join('')}
+        <button class="seg ${historyGroup === CREDITS_GROUP_ID ? 'active' : ''}" data-hgroup="${CREDITS_GROUP_ID}">Crédit restant</button>
       </div>
       <div id="history">${renderHistory(months, constantes)}</div>
     </section>
@@ -97,10 +124,11 @@ export async function renderSaisie(view: HTMLElement): Promise<void> {
   bindMonthSelect(view, ids)
   bindStepsTotal(view, live, constantes)
   bindHistoryTabs(view, months, constantes)
-  bindSave(view)
+  bindSave(view, loansSorted)
 }
 
 function renderHistory(months: MonthRecord[], constantes: Constantes): string {
+  if (historyGroup === CREDITS_GROUP_ID) return renderCreditsHistory(months)
   const group = DOMAIN_GROUPS.find((g) => g.id === historyGroup)!
   const rows = [...months].sort((a, b) => compareMonthIds(a.id, b.id)).slice(-12).reverse()
   if (rows.length === 0) return '<p class="muted">Aucun mois enregistré.</p>'
@@ -120,10 +148,32 @@ function renderHistory(months: MonthRecord[], constantes: Constantes): string {
   return `<div class="table-wrap"><table class="grid"><thead>${head}</thead><tbody>${body}</tbody></table></div>`
 }
 
+function sumCreditsRestant(m: MonthRecord): number {
+  return Object.values(m.creditsRestant ?? {}).reduce((a, v) => a + v, 0)
+}
+
+function renderCreditsHistory(months: MonthRecord[]): string {
+  const rows = [...months].sort((a, b) => compareMonthIds(a.id, b.id)).slice(-12).reverse()
+  if (rows.length === 0) return '<p class="muted">Aucun mois enregistré.</p>'
+  const head = '<tr><th>Mois</th><th>Crédit restant</th><th>Évolution</th></tr>'
+  const body = rows
+    .map((m, i) => {
+      const total = sumCreditsRestant(m)
+      const prev = i < rows.length - 1 ? sumCreditsRestant(rows[i + 1]) : null
+      const delta =
+        prev === null
+          ? ''
+          : `<span class="var ${total <= prev ? 'pos' : 'neg'}">${total <= prev ? '▼' : '▲'} ${fmtEuro(Math.abs(total - prev))}</span>`
+      return `<tr><td>${m.id}</td><td><strong>${fmtEuro(total)}</strong></td><td>${delta}</td></tr>`
+    })
+    .join('')
+  return `<div class="table-wrap"><table class="grid"><thead>${head}</thead><tbody>${body}</tbody></table></div>`
+}
+
 function bindHistoryTabs(view: HTMLElement, months: MonthRecord[], constantes: Constantes): void {
-  DOMAIN_GROUPS.forEach((g) => {
-    view.querySelector(`[data-hgroup="${g.id}"]`)?.addEventListener('click', () => {
-      historyGroup = g.id
+  view.querySelectorAll<HTMLElement>('[data-hgroup]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      historyGroup = (btn.dataset.hgroup as DomainKey | typeof CREDITS_GROUP_ID)!
       view.querySelectorAll('[data-hgroup]').forEach((b) => b.classList.toggle('active', (b as HTMLElement).dataset.hgroup === historyGroup))
       const el = view.querySelector<HTMLElement>('#history')
       if (el) el.innerHTML = renderHistory(months, constantes)
@@ -184,6 +234,8 @@ function bindStepsTotal(view: HTMLElement, live: Map<string, MonthLive>, constan
         const el = view.querySelector<HTMLElement>(`#step-total-${g.id}`)
         if (el) el.textContent = fmtEuro(liveTotalFor(g.id, month, constantes))
       }
+      const ct = view.querySelector<HTMLElement>(`#step-total-${CREDITS_GROUP_ID}`)
+      if (ct) ct.textContent = fmtEuro(creditsInputTotal(view))
     })
   })
 }
@@ -194,12 +246,31 @@ function collectAll(view: HTMLElement): MonthRecord {
   return collectMonth(month, view)
 }
 
-async function bindSave(view: HTMLElement): Promise<void> {
+function creditsInputTotal(view: HTMLElement): number {
+  let s = 0
+  view.querySelectorAll<HTMLInputElement>('#steps input[data-credit-key]').forEach((i) => {
+    s += parseAmount(i.value)
+  })
+  return s
+}
+
+function collectCreditsRestant(view: HTMLElement, loans: Loan[]): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const loan of loans) {
+    const key = loanKey(loan)
+    const input = view.querySelector<HTMLInputElement>(`[data-credit-key="${key}"]`)
+    if (input) out[key] = parseAmount(input.value)
+  }
+  return out
+}
+
+async function bindSave(view: HTMLElement, loans: Loan[]): Promise<void> {
   view.querySelector('#save')!.addEventListener('click', async () => {
     const base = (await monthRepo.get(targetMonth)) ?? newMonth(targetMonth)
     base.id = targetMonth
     collectMonth(base, view)
-    const msg = view.querySelector<HTMLElement>('.msg')!
+    base.creditsRestant = collectCreditsRestant(view, loans)
+    const msg = view.querySelector<HTMLParagraphElement>('.msg')!
     try {
       await monthRepo.save(base)
       msg.textContent = `Mois ${formatMonthLabel(targetMonth)} enregistré (chiffré).`

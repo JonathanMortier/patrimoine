@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountApp, type Route } from '../../app'
 import { deleteDb } from '../../db'
 import { monthRepo } from '../../db/repos/months'
+import { creditsRepo } from '../../db/repos/credits'
 import { setup } from '../../crypto/security'
 import { compareMonthIds, currentMonthId } from '../../utils/date'
 
@@ -58,5 +59,110 @@ describe('navigation avec mois déjà enregistrés', () => {
     const norm = view().textContent!.replace(/[\u202f\u00a0]/g, ' ')
     expect(norm).toContain('vs 1 500 € (▼ 1 500 €)')
     expect(norm).toContain('vs 500 € (▼ 500 €)')
+  })
+
+  it('le dashboard affiche KPIs, remplissage PEA et tableau fallback', async () => {
+    await monthRepo.save({
+      ...((await monthRepo.get(currentMonthId()))!),
+      bourse: { cto: 10000, privateMk: 0, pea: 5000, plusValue: 0 },
+    })
+    tabFor('dashboard').click()
+    await vi.waitFor(() => expect(view().textContent).toContain('Répartition'))
+    expect(location.hash).toBe('#/dashboard')
+    expect(view().textContent).toContain('Remplissage PEA')
+    expect(view().querySelector('table.grid')).not.toBeNull()
+    expect(view().querySelectorAll('canvas').length).toBe(2)
+  })
+
+  it('le dashboard affiche brut / net / parts BTC depuis les crédits', async () => {
+    await creditsRepo.save({
+      id: 'n1', nom: 'Nardouzans', numero: 1, dateDepart: '2023-01-01', dateFin: '2033-01-01',
+      taux: 0.015, mensualite: 850, montant: 200000, restant: 120000, pctRembourse: 40,
+    })
+    tabFor('dashboard').click()
+    await vi.waitFor(() => expect(view().textContent).toContain('Brut'))
+    expect(view().textContent).toContain('Part BTC (hors immo)')
+    expect(view().textContent).toContain('Part BTC (brut')
+    expect(view().textContent).toContain('Part BTC (net')
+  })
+
+  it('l’écran Crédits immo reproduit le tableau (Total) en lecture seule', async () => {
+    const loan = {
+      id: 'n1', nom: 'Nardouzans', numero: 1353608, dateDepart: '2020-10-05', dateFin: '2027-10-04',
+      taux: 0.006, mensualite: 667.48, montant: 54894, restant: 5992.61, pctRembourse: 40,
+    }
+    await creditsRepo.save(loan)
+    tabFor('credits').click()
+    await vi.waitFor(() => expect(view().textContent).toContain('Crédits immo'))
+    expect(view().textContent).toContain('Nardouzans')
+    expect(view().textContent).toContain('Sous-total')
+    expect(view().textContent).toContain('Total')
+    expect(view().querySelector('input.restant-val')).toBeNull()
+    expect(view().querySelector('#credits-save')).toBeNull()
+    expect(view().textContent).toContain('Saisie')
+  })
+
+  it('les attributs du tableau Crédits sont masquables via les chips', async () => {
+    const loan = {
+      id: 'n1', nom: 'Nardouzans', numero: 1353608, dateDepart: '2020-10-05', dateFin: '2027-10-04',
+      taux: 0.006, mensualite: 667.48, montant: 54894, restant: 5992.61, pctRembourse: 40,
+    }
+    await creditsRepo.save(loan)
+    tabFor('credits').click()
+    await vi.waitFor(() => expect(view().textContent).toContain('Crédits immo'))
+
+    const departRow = view().querySelector<HTMLTableRowElement>('tr[data-attr="depart"]')!
+    expect(departRow.classList.contains('hidden')).toBe(false)
+
+    const chip = view().querySelector<HTMLInputElement>('.chip input[data-attr="depart"]')!
+    expect(chip.checked).toBe(true)
+    chip.click()
+
+    expect(view().querySelector('tr[data-attr="depart"]')!.classList.contains('hidden')).toBe(true)
+    expect(view().querySelector('tr[data-attr="restant"]')!.classList.contains('hidden')).toBe(false)
+    expect(view().querySelector<HTMLInputElement>('.chip input[data-attr="restant"]')).toBeNull()
+  })
+
+  it('saisit le crédit restant dans Saisie et le sauvegarde mois par mois', async () => {
+    await creditsRepo.save({
+      id: 'n1', nom: 'Nardouzans', numero: 1353608, dateDepart: '2020-10-05', dateFin: '2027-10-04',
+      taux: 0.006, mensualite: 667.48, montant: 54894, restant: 5992.61, pctRembourse: 40,
+    })
+    tabFor('saisie').click()
+    await vi.waitFor(() => expect(view().textContent).toContain('Crédit restant'))
+    const target = view().querySelector<HTMLSelectElement>('#m-target')!.value
+    expect(target).toBeTruthy()
+    const input = view().querySelector<HTMLInputElement>('input[data-credit-key="Nardouzans-1353608"]')!
+    expect(input.value).toBe('5992.61')
+    input.value = '5800'
+    view().querySelector<HTMLButtonElement>('#save')!.click()
+    await new Promise((r) => setTimeout(r, 300))
+    const saved = await monthRepo.get(target)
+    // eslint-disable-next-line no-console
+    console.log('SAVED MONTH', JSON.stringify({ id: saved?.id, creditsRestant: saved?.creditsRestant, horsImmo: saved?.horsImmo }))
+    await vi.waitFor(async () => {
+      const m = await monthRepo.get(target)
+      expect(m?.creditsRestant?.['Nardouzans-1353608']).toBe(5800)
+    })
+  })
+
+  it('le dashboard calcule Net à partir du restant mensuel saisi', async () => {
+    await creditsRepo.save({
+      id: 'n1', nom: 'Nardouzans', numero: 1353608, dateDepart: '2020-10-05', dateFin: '2027-10-04',
+      taux: 0.006, mensualite: 667.48, montant: 100000, restant: 99999, pctRembourse: 1,
+    })
+    tabFor('saisie').click()
+    await vi.waitFor(() => expect(view().textContent).toContain('Crédit restant'))
+    const target = view().querySelector<HTMLSelectElement>('#m-target')!.value
+    const input = view().querySelector<HTMLInputElement>('input[data-credit-key="Nardouzans-1353608"]')!
+    input.value = '20000'
+    view().querySelector<HTMLButtonElement>('#save')!.click()
+    await vi.waitFor(async () => {
+      expect((await monthRepo.get(target))?.creditsRestant?.['Nardouzans-1353608']).toBe(20000)
+    })
+    tabFor('dashboard').click()
+    await vi.waitFor(() => expect(view().textContent).toContain('− dettes'))
+    const norm = view().textContent!.replace(/[\u202f\u00a0]/g, ' ')
+    expect(norm).toContain('− dettes 20 000 €')
   })
 })
