@@ -4,13 +4,13 @@ Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: tr
 
 import 'fake-indexeddb/auto'
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountApp, type Route } from '../../app'
 import { deleteDb } from '../../db'
 import { monthRepo } from '../../db/repos/months'
 import { creditsRepo } from '../../db/repos/credits'
 import { setup } from '../../crypto/security'
-import { compareMonthIds, currentMonthId } from '../../utils/date'
+import { compareMonthIds, currentMonthId, nextAfterIds, previousMonthId } from '../../utils/date'
 
 const PASSWORD = 'test-secret'
 
@@ -23,6 +23,10 @@ function view(): HTMLElement {
 }
 
 describe('navigation avec mois déjà enregistrés', () => {
+  // Laisse terminer les handlers async (#save → save → re-render) avant le
+  // deleteDb() du beforeEach suivant, sinon fake-indexeddb reste bloqué.
+  afterEach(() => new Promise((r) => setTimeout(r, 20)))
+
   beforeEach(async () => {
     await deleteDb()
     await setup(PASSWORD)
@@ -39,6 +43,7 @@ describe('navigation avec mois déjà enregistrés', () => {
       })
     }
     document.body.innerHTML = '<div id="app"></div>'
+    if (location.hash !== '') location.hash = ''
     mountApp(document.getElementById('app')!)
   })
 
@@ -128,21 +133,22 @@ describe('navigation avec mois déjà enregistrés', () => {
       id: 'n1', nom: 'Nardouzans', numero: 1353608, dateDepart: '2020-10-05', dateFin: '2027-10-04',
       taux: 0.006, mensualite: 667.48, montant: 54894, restant: 5992.61, pctRembourse: 40,
     })
+    const target = nextAfterIds(['2026-09', '2026-11'])
+    expect(target).toBe('2026-12')
     tabFor('saisie').click()
     await vi.waitFor(() => expect(view().textContent).toContain('Crédit restant'))
-    const target = view().querySelector<HTMLSelectElement>('#m-target')!.value
-    expect(target).toBeTruthy()
+    const select = view().querySelector<HTMLSelectElement>('#m-target')!
+    expect(Array.from(select.options).map((o) => o.value)).toContain(target)
     const input = view().querySelector<HTMLInputElement>('input[data-credit-key="Nardouzans-1353608"]')!
     expect(input.value).toBe('5992.61')
     input.value = '5800'
     view().querySelector<HTMLButtonElement>('#save')!.click()
-    await new Promise((r) => setTimeout(r, 300))
-    const saved = await monthRepo.get(target)
-    // eslint-disable-next-line no-console
-    console.log('SAVED MONTH', JSON.stringify({ id: saved?.id, creditsRestant: saved?.creditsRestant, horsImmo: saved?.horsImmo }))
     await vi.waitFor(async () => {
       const m = await monthRepo.get(target)
       expect(m?.creditsRestant?.['Nardouzans-1353608']).toBe(5800)
+    })
+    await vi.waitFor(() => {
+      expect(Array.from(view().querySelector<HTMLSelectElement>('#m-target')!.options).map((o) => o.value)).toContain('2027-01')
     })
   })
 
@@ -151,9 +157,24 @@ describe('navigation avec mois déjà enregistrés', () => {
       id: 'n1', nom: 'Nardouzans', numero: 1353608, dateDepart: '2020-10-05', dateFin: '2027-10-04',
       taux: 0.006, mensualite: 667.48, montant: 100000, restant: 99999, pctRembourse: 1,
     })
+    // Le dashboard affiche le mois courant en priorité : on limite l'historique
+    // au seul mois précédent pour que la saisie cible le mois courant.
+    for (const id of await monthRepo.ids()) await monthRepo.remove(id)
+    const lastId = previousMonthId(currentMonthId())
+    await monthRepo.save({
+      id: lastId,
+      bourse: { cto: 1000, privateMk: 0, pea: 500, plusValue: 0 },
+      assuranceVie: { livretVie: 0, multiVie: 0, cashFortuneo: 0, linxea: 0, scpi: 0 },
+      crowdlending: { investi: 0, soldeDispo: 0, revenuBrut: 0, fiscalite: 0 },
+      crypto: { tradeRep: 0, binance: 0, ledger: 0, hotWalletPrincipalUSD: 0, hotWalletLedgerUSD: 0, defiUSD: 0, btc: 0 },
+      horsImmo: { compteCourantCa: 500, compteCourantFortuneo: 0, compteCourantTradeRep: 0, livretA: 0, ldd: 0 },
+    })
+    const target = nextAfterIds([lastId])
+    expect(target).toBe(currentMonthId())
     tabFor('saisie').click()
     await vi.waitFor(() => expect(view().textContent).toContain('Crédit restant'))
-    const target = view().querySelector<HTMLSelectElement>('#m-target')!.value
+    const select = view().querySelector<HTMLSelectElement>('#m-target')!
+    expect(Array.from(select.options).map((o) => o.value)).toContain(target)
     const input = view().querySelector<HTMLInputElement>('input[data-credit-key="Nardouzans-1353608"]')!
     input.value = '20000'
     view().querySelector<HTMLButtonElement>('#save')!.click()

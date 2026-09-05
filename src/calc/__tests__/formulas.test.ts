@@ -22,6 +22,7 @@ const C: Constantes = {
   tauxRendement: 0.07,
   mensualiteTradeRep: 710,
   mensualiteFortuneo: 600,
+  googleClientId: '',
 }
 
 describe('horsImmo', () => {

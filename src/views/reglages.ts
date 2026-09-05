@@ -7,20 +7,26 @@ import { fetchMarketPrices, MarketFetchError } from '../utils/market'
 type FieldDef = {
   key: keyof Constantes
   label: string
-  type?: 'number' | 'date'
+  type?: 'number' | 'date' | 'text'
   step?: string
   min?: string
   suffix?: string
   hint?: string
+  /** Stockée en fraction (0.07), affichée et saisie en % (7) */
+  pct?: boolean
 }
 
 const NUMBER_FIELDS: FieldDef[] = [
   { key: 'plafondPea', label: 'Plafond PEA (€)', step: '100', min: '0', hint: 'Montant maximal d’un PEA. Sert à calculer le remplissage du PEA.' },
   { key: 'btcUsd', label: 'Prix du BTC (USD)', step: 'any', min: '0', hint: 'Prix « actuel » du bitcoin en $. Utilisé pour la part BTC.' },
   { key: 'btcEur', label: 'Prix du BTC (EUR)', step: 'any', min: '0', hint: 'Optionnel : sinon calculé à partir du prix $ et de la conversion.' },
-  { key: 'tauxRendement', label: 'Taux de rendement annuel (%)', type: 'number', step: 'any', min: '0', hint: 'Ex. 7 % pour la projection Bourse.' },
+  { key: 'tauxRendement', label: 'Taux de rendement annuel (%)', type: 'number', step: 'any', min: '0', pct: true, hint: 'Ex. « 7 » ou « 0,07 » (7 %) pour la projection Bourse.' },
   { key: 'mensualiteTradeRep', label: 'Mensualité Trade Republic (€/mois)', step: '10', min: '0' },
   { key: 'mensualiteFortuneo', label: 'Mensualité Fortuneo (€/mois)', step: '10', min: '0' },
+]
+
+const TEXT_FIELDS: FieldDef[] = [
+  { key: 'googleClientId', label: 'ID client Google OAuth (web)', type: 'text', hint: 'Client ID de la Google Cloud Console — requis pour le backup Google Drive (scope drive.file).' },
 ]
 
 const DATE_FIELDS: FieldDef[] = [
@@ -36,13 +42,19 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
     <label class="field">
       <span>${def.label}${def.hint ? ` — <em>${def.hint}</em>` : ''}</span>
       <input type="number" inputmode="decimal" name="${def.key}" step="${def.step ?? 'any'}" min="${def.min ?? '0'}"
-        value="${fmtAmount(constantes[def.key] as number)}" ${def.suffix ? `data-suffix="${def.suffix}"` : ''} />
+        value="${fmtAmount(def.pct ? (constantes[def.key] as number) * 100 : (constantes[def.key] as number))}" ${def.suffix ? `data-suffix="${def.suffix}"` : ''} />
     </label>`
 
   const dateFieldHtml = (def: FieldDef): string => `
     <label class="field">
       <span>${def.label}</span>
       <input type="date" name="${def.key}" value="${constantes[def.key] as string}" />
+    </label>`
+
+  const textFieldHtml = (def: FieldDef): string => `
+    <label class="field">
+      <span>${def.label}${def.hint ? ` — <em>${def.hint}</em>` : ''}</span>
+      <input type="text" name="${def.key}" value="${(constantes[def.key] as string) ?? ''}" autocomplete="off" spellcheck="false" />
     </label>`
 
   const convHtml = `
@@ -60,6 +72,7 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
         ${convHtml}
         ${NUMBER_FIELDS.map(numberFieldHtml).join('')}
         ${DATE_FIELDS.map(dateFieldHtml).join('')}
+        ${TEXT_FIELDS.map(textFieldHtml).join('')}
         <button type="button" id="fetch-market" class="ghost">🌐 Récupérer les prix en ligne</button>
         <button type="submit" class="primary">Enregistrer les constantes</button>
         <p class="msg" aria-live="polite"></p>
@@ -131,17 +144,23 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
       const el = view.querySelector<HTMLInputElement>(`[name=${key}]`)
       return (el?.value ?? '').trim()
     }
+    const getText = (key: string): string => {
+      const el = view.querySelector<HTMLInputElement>(`[name=${key}]`)
+      return (el?.value ?? '').trim()
+    }
 
+    const tauxInput = getNum('tauxRendement')
     const next: Constantes = {
       ...(await constantesRepo.get()),
       convUsdEur: getNum('convUsdEur'),
       plafondPea: getNum('plafondPea'),
       btcUsd: getNum('btcUsd'),
       btcEur: getNum('btcEur'),
-      tauxRendement: getNum('tauxRendement') / 100,
+      tauxRendement: tauxInput <= 1 ? tauxInput : tauxInput / 100,
       mensualiteTradeRep: getNum('mensualiteTradeRep'),
       mensualiteFortuneo: getNum('mensualiteFortuneo'),
       dateOuverturePea: getDate('dateOuverturePea'),
+      googleClientId: getText('googleClientId'),
     }
 
     if (!Number.isFinite(next.convUsdEur) || next.convUsdEur <= 0) {

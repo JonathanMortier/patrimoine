@@ -217,15 +217,39 @@ intégrité + authenticité (détection de falsification).
   Chart.js** (`views/dashboard.ts` : KPI hors immo/brut/net avec variation,
   remplissage PEA, part BTC brut/net/hors-immo, mois manquants, courbe
   évolution + anneau répartition, tableau de repli si pas de `<canvas>`).
-- **8 : partielle.** **Crédits immo** (écran complet `views/credits.ts` :
+- **8 : faite.** **Crédits immo** (écran complet `views/credits.ts` :
   tableau transposé par propriété/numéro, sous-totaux, total, % remboursé,
   palier 250 k€, colonnes masquables) + **Constantes complètes éditables dans
   Réglages** (voir §Décisions : plafond PEA, prix BTC €/$, taux rendement,
   mensualités Trade Rep/Fortuneo, date ouverture PEA, conversion, + bouton
-  « Récupérer les prix en ligne »). **Projection Bourse (écran) : NON faite**
-  (moteur `calc/projection.ts` déjà testé par la régression ODS).
-- **9 / 10 : non commencées** (backup Google Drive + export/import chiffré ;
-  polissage).
+  « Récupérer les prix en ligne »). **Projection Bourse (écran) : faite**
+  (`views/projection.ts` : KPIs, détail mensuel Objectif/Réel + chart,
+  chart annuel Réel/Plus value/Évol. plus value, table annuelle 2025→2050
+  récurrence 7 % + valeurs 1er janvier, salaire retrait 4 % — moteur
+  `calc/projection.ts` + `calc/projectionAnnual.ts` + 
+  `calc/projectionMonthly.ts`, régressé vs ODS).
+- **9 : faite.** **Backup Google Drive chiffré + export/import chiffré** :
+  fichier **.json chiffré** autonome (`src/backup/backup.ts` — PBKDF2-SHA256 +
+  sel aléatoire + DEK wrappée + AES-256-GCM, même mécanisme que la base ;
+  se déchiffre sur n'importe quel appareil avec le mot de passe), export/
+  import dans **Import** (`Exporter (.json chiffré)` → téléchargement
+  `patrimoine-backup-YYYY-MM-DD.json`, « Importer un fichier… » → restauration
+  remplace mois/prêts/constantes, chiffrés à l'écriture) ; **Google Drive**
+  (`src/utils/drive.ts` — OAuth 2.0 GIS scope drive.file, fichier
+  `patrimoine-backup-current.json` créé ou mis à jour, « Restaurer depuis
+  Drive ») ; ID client Google OAuth configurable dans **Réglages → Constantes**
+  (`googleClientId`, champ texte) ; erreurs métier (mot de passe incorrect,
+  fichier altéré) et messages dédiés.
+- **10 : faite.** **Polissage responsive mobile** : tabbar 6 colonnes (grille,
+  `flex-wrap`), focus visible, suppression du tap highlight iOS, modale en
+  bottom-sheet avec safe-area, breakpoints 420/360 px, metas iOS PWA
+  standalone + h1 « Patrimoine · {label} ». **Tests de navigation bout-en-bout
+  réparés** (`views/__tests__/navigation-seeded.test.ts`) : les 2 échecs
+  pré-existants (sélecteur de mois sous happy-dom, calcul Net depuis le
+  restant saisi) sont corrigés en déterminant la cible du mois via
+  `nextAfterIds()` (au lieu de relire un `<option selected>` imprévisible) et
+  en réinitialisant `location.hash` + un `afterEach` de drainage dans le
+  `beforeEach` (courses IndexedDB entre tests).
 
 ### Décisions & divergences vs ce plan (à jour)
 - **Comptes / Livrets** = 5 sous-comptes sommé :
@@ -252,8 +276,7 @@ intégrité + authenticité (détection de falsification).
   rafraîchir périodiquement depuis Réglages** (bouton en ligne).
 - **Page Domaines supprimée** : l'**Historique** par domaine (segs + tableau 12
   mois) est dans Saisie. Routes actuelles : dashboard, saisie, import,
-  credits, projection, reglages (dashboard/credits fonctionnels, projection =
-  placeholder).
+  credits, projection, reglages (toutes fonctionnelles).
 - **Réglages** : carte « Constantes » (conversion €/$, plafond PEA, prix BTC €/$
   `btcEur` optionnel sinon calculé `btcUsd ÷ convUsdEur`, taux rendement
   `% → /100`, mensualités Trade Rep/Fortuneo, date ouverture PEA) + bouton
@@ -268,13 +291,16 @@ intégrité + authenticité (détection de falsification).
   `0.01`). La garde réelle est la validation JS (nombre fini, ≥ 0 ; conv > 0).
 
 ### Vérifications
-- `npx vitest run` → **145 verts / 147** ; `npm run typecheck` ; `npm run build`
+- `npx vitest run` → **168 verts / 168** ; `npm run typecheck` ; `npm run build`
   (tsc + vite, service worker).
-  - **2 échecs pré-existants non liés** dans `views/__tests__/navigation-seeded.test.ts`
-    (sauvegarde du « crédit restant » dans Saisie) — présents avant ce travail,
-    confirmés en revertant la partie Constantes.
+  - Échecs pré-existants de `views/__tests__/navigation-seeded.test.ts`
+    corrigés (étape 10) : déterminisme du mois cible via `nextAfterIds()`,
+    reset de `location.hash` et drainage async dans le `beforeEach`.
 - Tests spécifiques Constantes/marché : `views/__tests__/reglages.test.ts`,
-  `utils/__tests__/market.test.ts` (fetch moké, réussite partielle, échec total).
+  `utils/__tests__/market.test.ts` (fetch moké, réussite partielle, échec total),
+  `utils/__tests__/drive.test.ts` (GIS mocké, upload creation/update, download),
+  `backup/__tests__/backup.test.ts` (roundtrip chiffré, mauvais mot de passe,
+  fichier altéré, restauration complète).
 - Données de test réelles **gitignoreées** (`src/import/__fixtures__/`, déjà en
   place sur la machine) : une régression ODS/layouts échoue sur un clone frais
   sans fixtures → ne pas pousser de code qui briserait cela sans remarque.
@@ -285,8 +311,16 @@ intégrité + authenticité (détection de falsification).
   sur le formulaire.
 
 ### Prochaine session
-1. **Terminer l'étape 8** : écran **Projection Bourse** (moteur
-   `calc/projection.ts` prêt + testé régression ODS : objectif 7 %, invest
-   mensuel, retrait 4 %, plus-value ; chart + tableau de repli).
-2. **9 / 10** : backup Google Drive chiffré + export/import chiffré ; polissage
-   responsive mobile + validation finale.
+- **Toutes les étapes §9 (1 → 10) sont faites et validées** (168/168 tests,
+  typecheck, build). Prochaine session : recette manuelle mobile sur
+  appareil/réseau réel + vieillissement de la PWA (options à étudier :
+  réglage des rappels de sauvegarde, tests e2e navigateur, i18n).
+
+### Décisions & divergences vs ce plan (backup)
+- Le fichier Drive est `patrimoine-backup-current.json` (nom stable, créé ou
+  remplacé à chaque sauvegarde) plutôt qu'un nom daté : la restauration pointe
+  toujours la même entrée et évite l'accumulation de fichiers. L'export manuel
+  garde le nom daté `patrimoine-backup-YYYY-MM-DD.json`.
+- Le backup exige le mot de passe d'application à l'export (choix simple) ; la
+  restauration d'un fichier/Drive exige le mot de passe de chiffrement de ce
+  fichier (indépendant de celui de la base, validé par le déchiffrement GCM).

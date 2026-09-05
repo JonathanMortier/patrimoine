@@ -11,6 +11,15 @@ export function computeMonthTotal(base: number, taux: number, investMensuel: num
   return base * (1 + taux / 12) + investMensuel
 }
 
+/**
+ * compute_plus_value(currentTotal, nbYears, investMensuel) du tableur :
+ *   plus value = total − nbYears × investMensuel × 12
+ * nbYears = nombre d'années de versements cumulés (année − année de base).
+ */
+export function computePlusValue(currentTotal: number, nbYears: number, investMensuel: number): number {
+  return currentTotal - nbYears * investMensuel * 12
+}
+
 export interface ProjectionYear {
   year: number
   objectif: number
@@ -38,7 +47,7 @@ export function projectObjectif(o: ProjectObjectifOptions): ProjectionYear[] {
   let prevPlus = 0
   for (let y = 0; y < o.years; y++) {
     const objectif = computeYearTotal(prev, o.taux, investAnnuel)
-    const plusValue = objectif - (y + 1) * investAnnuel
+    const plusValue = computePlusValue(objectif, y + 1, o.investMensuel)
     out.push({
       year: o.startYear + y + 1,
       objectif,

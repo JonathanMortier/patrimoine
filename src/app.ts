@@ -5,6 +5,7 @@ import { renderImport } from './views/import'
 import { renderSaisie } from './views/saisie'
 import { renderDashboard } from './views/dashboard'
 import { renderCredits } from './views/credits'
+import { renderProjection } from './views/projection'
 
 export type Route = 'dashboard' | 'saisie' | 'import' | 'credits' | 'projection' | 'reglages'
 
@@ -84,6 +85,12 @@ function render(): void {
   if (!view) return
   const active = currentRoute()
 
+  const title = document.querySelector('.topbar h1')
+  if (title) {
+    const label = ROUTES.find((r) => r.id === active)?.label ?? ''
+    title.textContent = active === 'dashboard' ? 'Patrimoine' : `Patrimoine · ${label}`
+  }
+
   rootTabs().forEach((btn) => btn.classList.toggle('active', btn.dataset.route === active))
 
   if (active === 'credits') {
@@ -108,6 +115,11 @@ function render(): void {
 
   if (active === 'saisie') {
     void renderSaisie(view).catch((err) => showRenderError(view, err))
+    return
+  }
+
+  if (active === 'projection') {
+    void renderProjection(view).catch((err) => showRenderError(view, err))
     return
   }
 

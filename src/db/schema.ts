@@ -92,4 +92,5 @@ export interface Constantes {
   tauxRendement: number // 7%
   mensualiteTradeRep: number // 710
   mensualiteFortuneo: number // 600
+  googleClientId: string // OAuth Client ID web (Google Cloud Console) pour le backup Drive
 }

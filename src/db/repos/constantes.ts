@@ -12,6 +12,7 @@ export const DEFAULT_CONSTANTES: Constantes = {
   tauxRendement: 0.07,
   mensualiteTradeRep: 710,
   mensualiteFortuneo: 600,
+  googleClientId: '',
 }
 
 const KEY = 'constantes'
@@ -22,8 +23,9 @@ export const constantesRepo = {
     if (!current) return { ...DEFAULT_CONSTANTES }
     const conv = current.convUsdEur === 1 ? DEFAULT_CONSTANTES.convUsdEur : current.convUsdEur
     const btcUsd = current.btcUsd === 0 ? DEFAULT_CONSTANTES.btcUsd : current.btcUsd
-    if (conv !== current.convUsdEur || btcUsd !== current.btcUsd) {
-      const next = { ...current, convUsdEur: conv, btcUsd }
+    const googleClientId = current.googleClientId ?? ''
+    if (conv !== current.convUsdEur || btcUsd !== current.btcUsd || googleClientId !== current.googleClientId) {
+      const next = { ...current, convUsdEur: conv, btcUsd, googleClientId }
       await putEncoded(STORES.constantes, KEY, next)
       return next
     }

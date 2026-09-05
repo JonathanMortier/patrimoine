@@ -45,6 +45,7 @@ export async function renderSaisie(view: HTMLElement): Promise<void> {
   base.id = targetMonth
 
   const creditsRestant = base.creditsRestant ?? {}
+  const monthExists = months.some((m) => m.id === targetMonth)
   const creditsFields = loansSorted
     .map((l) => {
       const key = loanKey(l)
@@ -115,16 +116,29 @@ export async function renderSaisie(view: HTMLElement): Promise<void> {
     <section class="card">
       <div class="row">
         <button id="save" class="primary">Enregistrer ${formatMonthLabel(targetMonth)}</button>
+        ${monthExists ? '<button id="delete" class="danger">Supprimer</button>' : ''}
         <span class="muted">Écriture chiffrée.</span>
       </div>
       <p class="msg" aria-live="polite"></p>
     </section>
+
+    <div id="del-modal" class="modal-overlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="del-title">
+        <h3 id="del-title">Supprimer ${formatMonthLabel(targetMonth)} ?</h3>
+        <p>Toutes les données du mois sélectionné seront définitivement supprimées.</p>
+        <div class="row modal-actions">
+          <button id="del-cancel" class="ghost">Annuler</button>
+          <button id="del-confirm" class="danger">Supprimer</button>
+        </div>
+      </div>
+    </div>
   `
 
   bindMonthSelect(view, ids)
   bindStepsTotal(view, live, constantes)
   bindHistoryTabs(view, months, constantes)
   bindSave(view, loansSorted)
+  bindDelete(view)
 }
 
 function renderHistory(months: MonthRecord[], constantes: Constantes): string {
@@ -278,6 +292,31 @@ async function bindSave(view: HTMLElement, loans: Loan[]): Promise<void> {
       await renderSaisie(view)
     } catch (err) {
       msg.textContent = `Enregistrement impossible (verrouillé ?) : ${(err as Error).message}`
+      msg.className = 'msg err'
+    }
+  })
+}
+
+function bindDelete(view: HTMLElement): void {
+  const modal = view.querySelector<HTMLElement>('#del-modal')
+  const open = view.querySelector<HTMLButtonElement>('#delete')
+  if (!modal || !open) return
+  const openModal = () => { modal.hidden = false }
+  const closeModal = () => { modal.hidden = true }
+  open.addEventListener('click', openModal)
+  view.querySelector('#del-cancel')!.addEventListener('click', closeModal)
+  modal.addEventListener('click', (ev) => { if (ev.target === modal) closeModal() })
+  view.querySelector('#del-confirm')!.addEventListener('click', async () => {
+    const msg = view.querySelector<HTMLParagraphElement>('.msg')!
+    try {
+      await monthRepo.remove(targetMonth)
+      closeModal()
+      msg.textContent = `Mois ${formatMonthLabel(targetMonth)} supprimé.`
+      msg.className = 'msg ok'
+      await renderSaisie(view)
+    } catch (err) {
+      closeModal()
+      msg.textContent = `Suppression impossible (verrouillé ?) : ${(err as Error).message}`
       msg.className = 'msg err'
     }
   })
