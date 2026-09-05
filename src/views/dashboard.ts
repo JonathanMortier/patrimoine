@@ -4,7 +4,7 @@ import { monthRepo } from '../db/repos/months'
 import { creditsRepo } from '../db/repos/credits'
 import { dashboardSeries, missingMonths, type DashboardPoint } from '../calc/dashboard'
 import { brutTotal, netTotal, immoBrut, restantDette, btcShare } from '../calc/netBrut'
-import { formatMonthLabel } from '../utils/date'
+import { formatMonthLabel, currentMonthId } from '../utils/date'
 import { fmtEuro, fmtPct } from '../utils/format'
 
 const PALETTE = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#0ea5e9', '#a855f7']
@@ -35,7 +35,9 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
     creditsRepo.all(),
   ])
   const series = dashboardSeries(months, constantes)
-  const last = series.at(-1)
+  const currentMonth = currentMonthId()
+  const last = series.find((p) => p.id === currentMonth) ?? series.at(-1)
+  const currentShown = last?.id === currentMonth
 
   if (!last) {
     view.innerHTML = `
@@ -50,7 +52,9 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
     ? ''
     : `<span class="var ${last.variation >= 0 ? 'pos' : 'neg'}">${last.variation >= 0 ? '▲' : '▼'} ${fmtEuro(Math.abs(last.variation))}</span>`
 
-  const peaPct = constantes.plafondPea > 0 ? (last.bourse / constantes.plafondPea) * 100 : null
+  // Remplissage PEA = valeur nette du PEA (valeur − plus value) / plafond
+  const peaNet = Math.max(0, last.pea - last.plusValue)
+  const peaPct = constantes.plafondPea > 0 ? (peaNet / constantes.plafondPea) * 100 : null
 
   const immoValeur = immoBrut(loans)
   const brut = brutTotal(last.horsImmo, immoValeur)
@@ -87,7 +91,7 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
   view.innerHTML = `
     <section class="card">
       <h2>Dashboard</h2>
-      <p class="muted">Dernier mois suivi : <strong>${formatMonthLabel(last.id)}</strong></p>
+      <p class="muted">${currentShown ? 'Mois courant' : 'Dernier mois suivi'} : <strong>${formatMonthLabel(last.id)}</strong></p>
       <div class="kpis">
         ${kpi('Hors immo', fmtEuro(last.horsImmo), variation)}
         ${kpi('Brut', fmtEuro(brut), `+ immo ${fmtEuro(immoValeur)}`)}
@@ -104,7 +108,7 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
       <label class="field">
         <span>Remplissage PEA — ${peaPct === null ? 'plafond non défini' : fmtPct(peaPct)}</span>
         <div class="meter">${peaPct !== null ? `<span style="width:${Math.min(100, peaPct).toFixed(1)}%"></span>` : ''}</div>
-        <span class="muted">${fmtEuro(last.bourse)} / ${fmtEuro(constantes.plafondPea)}</span>
+        <span class="muted">${fmtEuro(peaNet)} (PEA net) / ${fmtEuro(constantes.plafondPea)}</span>
       </label>
       <div class="row"><span class="muted">Part BTC (hors immo)</span><span class="step-total">${btcHorsImmo === null ? '—' : fmtPct(btcHorsImmo * 100)}</span></div>
       <div class="row"><span class="muted">Part BTC (brut ${fmtEuro(brut)})</span><span class="step-total">${btcBrut === null ? '—' : fmtPct(btcBrut * 100)}</span></div>
@@ -134,7 +138,11 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
 
 function makeLineChart(canvas: HTMLCanvasElement, series: DashboardPoint[]): Chart {
   const labels = series.map((p) => p.short)
-  const mk = (label: string, color: string, data: number[], width = 1) => ({
+  // 0 → null : un domaine non renseigné (ex. octobre) casse la courbe
+  // au lieu de faire plonger la ligne à zéro.
+  const serie = (get: (p: DashboardPoint) => number): (number | null)[] =>
+    series.map((p) => { const v = get(p); return v === 0 ? null : v })
+  const mk = (label: string, color: string, data: (number | null)[], width = 1) => ({
     label, data, borderColor: color, backgroundColor: color,
     borderWidth: width, tension: 0.3, pointRadius: 2,
   })
@@ -143,11 +151,11 @@ function makeLineChart(canvas: HTMLCanvasElement, series: DashboardPoint[]): Cha
     data: {
       labels,
       datasets: [
-        mk('Hors immo', '#ffffff', series.map((p) => p.horsImmo), 2.5),
-        mk('Bourse', PALETTE[0], series.map((p) => p.bourse)),
-        mk('Assurance Vie', PALETTE[1], series.map((p) => p.assuranceVie)),
-        mk('Crowdfunding', PALETTE[2], series.map((p) => p.crowdlending)),
-        mk('Crypto', PALETTE[3], series.map((p) => p.crypto)),
+        mk('Hors immo', '#ffffff', serie((p) => p.horsImmo), 2.5),
+        mk('Bourse', PALETTE[0], serie((p) => p.bourse)),
+        mk('Assurance Vie', PALETTE[1], serie((p) => p.assuranceVie)),
+        mk('Crowdfunding', PALETTE[2], serie((p) => p.crowdlending)),
+        mk('Crypto', PALETTE[3], serie((p) => p.crypto)),
       ],
     },
     options: {

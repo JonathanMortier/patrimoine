@@ -7,6 +7,8 @@ export interface DashboardPoint {
   short: string // MM/YY
   horsImmo: number
   bourse: number
+  pea: number
+  plusValue: number
   assuranceVie: number
   crowdlending: number
   crypto: number
@@ -35,6 +37,8 @@ export function dashboardSeries(months: MonthRecord[], constantes: Constantes): 
       short: m.id.slice(5) + '/' + m.id.slice(2, 4),
       horsImmo: d.horsImmo.total,
       bourse: d.bourse,
+      pea: m.bourse.pea,
+      plusValue: m.bourse.plusValue,
       assuranceVie: d.assuranceVie,
       crowdlending: d.crowdlending.total,
       crypto: d.crypto,

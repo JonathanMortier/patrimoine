@@ -41,6 +41,7 @@ describe('Réglages : édition complète des constantes', () => {
     const get = (name: string) => view().querySelector<HTMLInputElement>(`[name="${name}"]`)!.value
     expect(get('convUsdEur')).toBe('1.14')
     expect(get('plafondPea')).toBe('150000')
+    expect(get('tauxRendement')).toBe('7')
     expect(get('mensualiteTradeRep')).toBe('710')
     expect(get('mensualiteFortuneo')).toBe('600')
   })
@@ -74,6 +75,18 @@ describe('Réglages : édition complète des constantes', () => {
     expect(saved.mensualiteFortuneo).toBe(500)
     expect(saved.dateOuverturePea).toBe('2020-01-15')
     expect(DEFAULT_CONSTANTES.tauxRendement).toBe(0.07)
+  })
+
+  it('accepte le taux en fraction (0.07) comme un pourcentage (7)', async () => {
+    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    const set = (name: string, value: string) => {
+      const el = view().querySelector<HTMLInputElement>(`[name="${name}"]`)!
+      el.value = value
+    }
+    set('tauxRendement', '0.07')
+    view().querySelector<HTMLFormElement>('#const-form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await vi.waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
+    expect((await constantesRepo.get()).tauxRendement).toBeCloseTo(0.07, 6)
   })
 
   it('conserve la conversion inchangée quand seule une autre constante change', async () => {

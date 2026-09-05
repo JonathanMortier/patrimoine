@@ -217,13 +217,17 @@ intégrité + authenticité (détection de falsification).
   Chart.js** (`views/dashboard.ts` : KPI hors immo/brut/net avec variation,
   remplissage PEA, part BTC brut/net/hors-immo, mois manquants, courbe
   évolution + anneau répartition, tableau de repli si pas de `<canvas>`).
-- **8 : partielle.** **Crédits immo** (écran complet `views/credits.ts` :
+- **8 : faite.** **Crédits immo** (écran complet `views/credits.ts` :
   tableau transposé par propriété/numéro, sous-totaux, total, % remboursé,
   palier 250 k€, colonnes masquables) + **Constantes complètes éditables dans
   Réglages** (voir §Décisions : plafond PEA, prix BTC €/$, taux rendement,
   mensualités Trade Rep/Fortuneo, date ouverture PEA, conversion, + bouton
-  « Récupérer les prix en ligne »). **Projection Bourse (écran) : NON faite**
-  (moteur `calc/projection.ts` déjà testé par la régression ODS).
+  « Récupérer les prix en ligne »). **Projection Bourse (écran) : faite**
+  (`views/projection.ts` : KPIs, détail mensuel Objectif/Réel + chart,
+  chart annuel Réel/Plus value/Évol. plus value, table annuelle 2025→2050
+  récurrence 7 % + valeurs 1er janvier, salaire retrait 4 % — moteur
+  `calc/projection.ts` + `calc/projectionAnnual.ts` + 
+  `calc/projectionMonthly.ts`, régressé vs ODS).
 - **9 / 10 : non commencées** (backup Google Drive + export/import chiffré ;
   polissage).
 
@@ -252,8 +256,7 @@ intégrité + authenticité (détection de falsification).
   rafraîchir périodiquement depuis Réglages** (bouton en ligne).
 - **Page Domaines supprimée** : l'**Historique** par domaine (segs + tableau 12
   mois) est dans Saisie. Routes actuelles : dashboard, saisie, import,
-  credits, projection, reglages (dashboard/credits fonctionnels, projection =
-  placeholder).
+  credits, projection, reglages (toutes fonctionnelles).
 - **Réglages** : carte « Constantes » (conversion €/$, plafond PEA, prix BTC €/$
   `btcEur` optionnel sinon calculé `btcUsd ÷ convUsdEur`, taux rendement
   `% → /100`, mensualités Trade Rep/Fortuneo, date ouverture PEA) + bouton
@@ -268,7 +271,7 @@ intégrité + authenticité (détection de falsification).
   `0.01`). La garde réelle est la validation JS (nombre fini, ≥ 0 ; conv > 0).
 
 ### Vérifications
-- `npx vitest run` → **145 verts / 147** ; `npm run typecheck` ; `npm run build`
+- `npx vitest run` → **155 verts / 157** ; `npm run typecheck` ; `npm run build`
   (tsc + vite, service worker).
   - **2 échecs pré-existants non liés** dans `views/__tests__/navigation-seeded.test.ts`
     (sauvegarde du « crédit restant » dans Saisie) — présents avant ce travail,
@@ -285,8 +288,5 @@ intégrité + authenticité (détection de falsification).
   sur le formulaire.
 
 ### Prochaine session
-1. **Terminer l'étape 8** : écran **Projection Bourse** (moteur
-   `calc/projection.ts` prêt + testé régression ODS : objectif 7 %, invest
-   mensuel, retrait 4 %, plus-value ; chart + tableau de repli).
-2. **9 / 10** : backup Google Drive chiffré + export/import chiffré ; polissage
+1. **9 / 10** : backup Google Drive chiffré + export/import chiffré ; polissage
    responsive mobile + validation finale.
