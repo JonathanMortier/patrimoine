@@ -4,6 +4,8 @@ import { creditsRepo } from '../db/repos/credits'
 import { parseSheet, mergeDomain, type ParseResult, type SheetKind, formatMoney } from '../import/parsers'
 import { parseCreditSheet, toLoan, type CreditLoanInput } from '../import/credits'
 import { reconcileMonths, formatReconDiff } from '../import/reconcile'
+import { backupFileName, collectBackupData, createBackupJson, parseBackupString, restoreBackupData } from '../backup/backup'
+import { DriveError, DRIVE_BACKUP_NAME, downloadBackupFile, findBackupFile, getAccessToken, uploadBackupFile } from '../utils/drive'
 
 const KINDS: { id: SheetKind | 'credits'; label: string }[] = [
   { id: 'horsImmo', label: 'Hors immo' },
@@ -67,6 +69,51 @@ export function renderImport(view: HTMLElement): void {
       <h2>Zone dangereuse</h2>
       <button id="reset" class="ghost">Vider tous les mois importés</button>
     </section>
+
+    <section class="card">
+      <h2>Export / Import de fichier chiffré</h2>
+      <p class="muted">
+        Exporte l'ensemble des données (mois, crédits, constantes) dans un fichier
+        <strong>.json chiffré</strong> (même mécanisme que la base), ou restaure-le.
+        La restauration doit passer la <strong>vérification de l'onglet</strong> à
+        chaque écran <em>et</em> exige le mot de passe d'import.
+      </p>
+      <div class="row">
+        <button id="bk-export" class="primary">Exporter (.json chiffré)</button>
+        <button id="bk-import-file" class="ghost">Importer un fichier…</button>
+        <input type="file" id="bk-file" accept=".json,application/json" hidden />
+      </div>
+      <p class="msg" id="bk-msg" aria-live="polite"></p>
+    </section>
+
+    <section class="card">
+      <h2>Sauvegarde Google Drive</h2>
+      <p class="muted">
+        Stocke le fichier chiffré <code>${DRIVE_BACKUP_NAME}</code> sur votre Drive
+        (OAuth 2.0, scope drive.file). Nécessite un <strong>ID client Google OAuth</strong>
+        (web) configuré dans Réglages → Constantes.
+      </p>
+      <div class="row">
+        <button id="bk-drive-push" class="ghost">⬆ Sauvegarder sur Drive</button>
+        <button id="bk-drive-pull" class="ghost">⬇ Restaurer depuis Drive</button>
+      </div>
+      <p class="msg" id="bk-drive-msg" aria-live="polite"></p>
+    </section>
+
+    <div id="bk-pw-modal" class="modal-overlay" hidden>
+      <form class="modal" id="bk-pw-form">
+        <h3 id="bk-pw-title">Mot de passe</h3>
+        <p id="bk-pw-hint"></p>
+        <label class="field">
+          <span>Mot de passe</span>
+          <input type="password" id="bk-pw-input" minlength="4" required autocomplete="off" />
+        </label>
+        <div class="row modal-actions">
+          <button type="button" id="bk-pw-cancel" class="ghost">Annuler</button>
+          <button type="submit" class="primary">Continuer</button>
+        </div>
+      </form>
+    </div>
   `
 
   KINDS.forEach((k) => {
@@ -83,6 +130,7 @@ export function renderImport(view: HTMLElement): void {
   view.querySelector('#import')!.addEventListener('click', () => doImport(view))
   view.querySelector('#reconcile')!.addEventListener('click', () => doReconcile(view))
   view.querySelector('#reset')!.addEventListener('click', () => doReset(view))
+  bindBackup(view)
 }
 
 function kindLabel(): string {
@@ -260,4 +308,147 @@ async function doReset(view: HTMLElement): Promise<void> {
   sourceTotals.clear()
   msg(view, `Tous les mois (${ids.length}) ont été supprimés.`, true)
   renderImport(view)
+}
+
+function bindBackup(view: HTMLElement): void {
+  const fileInput = view.querySelector<HTMLInputElement>('#bk-file')!
+  const exportBtn = view.querySelector<HTMLButtonElement>('#bk-export')!
+  const importBtn = view.querySelector<HTMLButtonElement>('#bk-import-file')!
+  const drivePush = view.querySelector<HTMLButtonElement>('#bk-drive-push')!
+  const drivePull = view.querySelector<HTMLButtonElement>('#bk-drive-pull')!
+  const bkMsg = view.querySelector<HTMLElement>('#bk-msg')!
+
+  const setMsg = (el: HTMLElement, text: string, ok = false): void => {
+    el.textContent = text
+    el.className = ok ? 'msg ok' : 'msg err'
+  }
+
+  exportBtn.addEventListener('click', async () => {
+    const password = await askPassword(view, 'Exporter la sauvegarde', 'Mot de passe de l’application (sert à chiffrer le fichier).')
+    if (password === null) return
+    try {
+      const data = await collectBackupData()
+      const json = await createBackupJson(data, password)
+      downloadJson(json, backupFileName())
+      setMsg(bkMsg, 'Sauvegarde exportée au format .json chiffré.', true)
+    } catch (err) {
+      setMsg(bkMsg, `Export impossible : ${(err as Error).message}`)
+    }
+  })
+
+  importBtn.addEventListener('click', () => fileInput.click())
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0]
+    fileInput.value = ''
+    if (!file) return
+    const password = await askPassword(view, 'Importer une sauvegarde', 'Mot de passe de chiffrement de ce fichier (mot de passe d’import).')
+    if (password === null) return
+    try {
+      const text = await file.text()
+      const data = await parseBackupString(text, password)
+      if (!window.confirm(`Restaurer la sauvegarde du ${new Date(data.exportedAt).toLocaleDateString('fr-FR')} ? Les données actuelles seront remplacées.`)) return
+      await restoreBackupData(data)
+      setMsg(bkMsg, `Sauvegarde restaurée (${data.months.length} mois, ${data.credits.length} prêts).`, true)
+      renderImport(view)
+    } catch (err) {
+      setMsg(bkMsg, `Import impossible : ${(err as Error).message}`)
+    }
+  })
+
+  drivePush.addEventListener('click', () => void driveSave(view))
+  drivePull.addEventListener('click', () => void driveRestore(view))
+}
+
+async function driveSave(view: HTMLElement): Promise<void> {
+  const driveMsg = view.querySelector<HTMLElement>('#bk-drive-msg')!
+  const conf = await constantesRepo.get()
+  if (!conf.googleClientId.trim()) {
+    driveMsg.textContent = 'Configurez d’abord l’ID client Google OAuth dans Réglages → Constantes.'
+    driveMsg.className = 'msg err'
+    return
+  }
+  const password = await askPassword(view, 'Sauvegarder sur Drive', 'Mot de passe de l’application (sert à chiffrer le fichier).')
+  if (password === null) return
+  try {
+    driveMsg.textContent = 'Autorisation Google…'
+    driveMsg.className = 'msg'
+    const token = await getAccessToken(conf.googleClientId)
+    driveMsg.textContent = 'Chiffrement + envoi…'
+    const data = await collectBackupData()
+    const json = await createBackupJson(data, password)
+    const ref = await uploadBackupFile(token, json, DRIVE_BACKUP_NAME)
+    driveMsg.textContent = `Sauvegarde « ${ref.name ?? DRIVE_BACKUP_NAME} » enregistrée sur Drive.`
+    driveMsg.className = 'msg ok'
+  } catch (err) {
+    driveMsg.textContent = err instanceof DriveError ? err.message : `Sauvegarde Drive impossible : ${(err as Error).message}`
+    driveMsg.className = 'msg err'
+  }
+}
+
+async function driveRestore(view: HTMLElement): Promise<void> {
+  const driveMsg = view.querySelector<HTMLElement>('#bk-drive-msg')!
+  const conf = await constantesRepo.get()
+  if (!conf.googleClientId.trim()) {
+    driveMsg.textContent = 'Configurez d’abord l’ID client Google OAuth dans Réglages → Constantes.'
+    driveMsg.className = 'msg err'
+    return
+  }
+  const password = await askPassword(view, 'Restaurer depuis Drive', 'Mot de passe de chiffrement du fichier de sauvegarde.')
+  if (password === null) return
+  try {
+    driveMsg.textContent = 'Autorisation Google…'
+    driveMsg.className = 'msg'
+    const token = await getAccessToken(conf.googleClientId)
+    const ref = await findBackupFile(token, DRIVE_BACKUP_NAME)
+    if (!ref) {
+      driveMsg.textContent = 'Aucune sauvegarde trouvée sur Drive.'
+      driveMsg.className = 'msg err'
+      return
+    }
+    const text = await downloadBackupFile(token, ref)
+    const data = await parseBackupString(text, password)
+    if (!window.confirm(`Restaurer la sauvegarde du ${new Date(data.exportedAt).toLocaleDateString('fr-FR')} ? Les données actuelles seront remplacées.`)) return
+    await restoreBackupData(data)
+    driveMsg.textContent = `Sauvegarde restaurée depuis Drive (${data.months.length} mois, ${data.credits.length} prêts).`
+    driveMsg.className = 'msg ok'
+    renderImport(view)
+  } catch (err) {
+    driveMsg.textContent = err instanceof DriveError ? err.message : `Restauration Drive impossible : ${(err as Error).message}`
+    driveMsg.className = 'msg err'
+  }
+}
+
+function askPassword(view: HTMLElement, title: string, hint: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const overlay = view.querySelector<HTMLElement>('#bk-pw-modal')!
+    const input = overlay.querySelector<HTMLInputElement>('#bk-pw-input')!
+    overlay.querySelector<HTMLElement>('#bk-pw-title')!.textContent = title
+    overlay.querySelector<HTMLElement>('#bk-pw-hint')!.textContent = hint
+    input.value = ''
+    const close = (value: string | null) => {
+      overlay.hidden = true
+      resolve(value)
+    }
+    overlay.querySelector<HTMLButtonElement>('#bk-pw-cancel')!.addEventListener('click', () => close(null))
+    overlay.addEventListener('click', (ev) => {
+      if (ev.target === overlay) close(null)
+    })
+    overlay.querySelector<HTMLFormElement>('#bk-pw-form')!.addEventListener('submit', (ev) => {
+      ev.preventDefault()
+      close(input.value)
+    })
+    overlay.hidden = false
+    input.focus()
+  })
+}
+
+function downloadJson(content: string, filename: string): void {
+  const blob = new Blob([content], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }

@@ -65,10 +65,23 @@ button {
   border-radius: 10px;
   padding: 8px 12px;
   cursor: pointer;
+  min-height: 36px;
 }
 
 button.ghost {
   background: transparent;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
 #view {
@@ -94,7 +107,7 @@ button.ghost {
 .tabbar {
   height: var(--tabbar-h);
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   background: var(--bg);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
@@ -312,6 +325,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .row h2 {
@@ -427,6 +441,7 @@ table.grid th {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .step-head h2 {
@@ -557,4 +572,37 @@ table.grid.transposed th.col-grand {
 .unchips .chip input {
   margin: 0;
   accent-color: var(--accent);
+}
+
+/* ——— Mobile ——— */
+@media (max-width: 420px) {
+  #view {
+    padding: 12px;
+  }
+
+  .tab {
+    font-size: 10px;
+    padding: 4px 2px;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    border-radius: 16px 16px 0 0;
+    max-width: none;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 360px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-val {
+    font-size: 15px;
+  }
 }

@@ -7,7 +7,7 @@ import { fetchMarketPrices, MarketFetchError } from '../utils/market'
 type FieldDef = {
   key: keyof Constantes
   label: string
-  type?: 'number' | 'date'
+  type?: 'number' | 'date' | 'text'
   step?: string
   min?: string
   suffix?: string
@@ -23,6 +23,10 @@ const NUMBER_FIELDS: FieldDef[] = [
   { key: 'tauxRendement', label: 'Taux de rendement annuel (%)', type: 'number', step: 'any', min: '0', pct: true, hint: 'Ex. « 7 » ou « 0,07 » (7 %) pour la projection Bourse.' },
   { key: 'mensualiteTradeRep', label: 'Mensualité Trade Republic (€/mois)', step: '10', min: '0' },
   { key: 'mensualiteFortuneo', label: 'Mensualité Fortuneo (€/mois)', step: '10', min: '0' },
+]
+
+const TEXT_FIELDS: FieldDef[] = [
+  { key: 'googleClientId', label: 'ID client Google OAuth (web)', type: 'text', hint: 'Client ID de la Google Cloud Console — requis pour le backup Google Drive (scope drive.file).' },
 ]
 
 const DATE_FIELDS: FieldDef[] = [
@@ -47,6 +51,12 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
       <input type="date" name="${def.key}" value="${constantes[def.key] as string}" />
     </label>`
 
+  const textFieldHtml = (def: FieldDef): string => `
+    <label class="field">
+      <span>${def.label}${def.hint ? ` — <em>${def.hint}</em>` : ''}</span>
+      <input type="text" name="${def.key}" value="${(constantes[def.key] as string) ?? ''}" autocomplete="off" spellcheck="false" />
+    </label>`
+
   const convHtml = `
     <label class="field">
       <span>${CONV_FIELD.label}${CONV_FIELD.hint ? ` — <em>${CONV_FIELD.hint}</em>` : ''}</span>
@@ -62,6 +72,7 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
         ${convHtml}
         ${NUMBER_FIELDS.map(numberFieldHtml).join('')}
         ${DATE_FIELDS.map(dateFieldHtml).join('')}
+        ${TEXT_FIELDS.map(textFieldHtml).join('')}
         <button type="button" id="fetch-market" class="ghost">🌐 Récupérer les prix en ligne</button>
         <button type="submit" class="primary">Enregistrer les constantes</button>
         <p class="msg" aria-live="polite"></p>
@@ -133,6 +144,10 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
       const el = view.querySelector<HTMLInputElement>(`[name=${key}]`)
       return (el?.value ?? '').trim()
     }
+    const getText = (key: string): string => {
+      const el = view.querySelector<HTMLInputElement>(`[name=${key}]`)
+      return (el?.value ?? '').trim()
+    }
 
     const tauxInput = getNum('tauxRendement')
     const next: Constantes = {
@@ -145,6 +160,7 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
       mensualiteTradeRep: getNum('mensualiteTradeRep'),
       mensualiteFortuneo: getNum('mensualiteFortuneo'),
       dateOuverturePea: getDate('dateOuverturePea'),
+      googleClientId: getText('googleClientId'),
     }
 
     if (!Number.isFinite(next.convUsdEur) || next.convUsdEur <= 0) {

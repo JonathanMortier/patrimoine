@@ -77,6 +77,16 @@ describe('Réglages : édition complète des constantes', () => {
     expect(DEFAULT_CONSTANTES.tauxRendement).toBe(0.07)
   })
 
+  it('enregistre l’ID client Google OAuth (champ texte)', async () => {
+    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    const clientId = view().querySelector<HTMLInputElement>('[name="googleClientId"]')!
+    expect(clientId).not.toBeNull()
+    clientId.value = '1234-abc.apps.googleusercontent.com'
+    view().querySelector<HTMLFormElement>('#const-form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await vi.waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
+    expect((await constantesRepo.get()).googleClientId).toBe('1234-abc.apps.googleusercontent.com')
+  })
+
   it('accepte le taux en fraction (0.07) comme un pourcentage (7)', async () => {
     await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
     const set = (name: string, value: string) => {

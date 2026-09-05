@@ -85,6 +85,12 @@ function render(): void {
   if (!view) return
   const active = currentRoute()
 
+  const title = document.querySelector('.topbar h1')
+  if (title) {
+    const label = ROUTES.find((r) => r.id === active)?.label ?? ''
+    title.textContent = active === 'dashboard' ? 'Patrimoine' : `Patrimoine · ${label}`
+  }
+
   rootTabs().forEach((btn) => btn.classList.toggle('active', btn.dataset.route === active))
 
   if (active === 'credits') {
