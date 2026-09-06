@@ -324,3 +324,16 @@ intégrité + authenticité (détection de falsification).
 - Le backup exige le mot de passe d'application à l'export (choix simple) ; la
   restauration d'un fichier/Drive exige le mot de passe de chiffrement de ce
   fichier (indépendant de celui de la base, validé par le déchiffrement GCM).
+
+### Google Cloud Console — procédure OAuth (à faire au déploiement)
+Chaque nouveau domaine qui doit se connecter à Google Drive doit être déclaré
+comme **origin JavaScript autorisée** sur l'OAuth Client ID web :
+1. https://console.cloud.google.com/apis/credentials (compte Google propriétaire
+   du Client ID) → **Credentials → OAuth 2.0 Client IDs** → client web.
+2. **Authorized JavaScript origins → + ADD URI** → `https://<domaine>` (ex.
+   `https://patrimoine-kohl.vercel.app`) → **Save** (propagation quelques
+   minutes à ~1 h ; sinon erreur `origin_mismatch` au popup).
+3. Pas besoin d'**Authorized redirect URIs** : flux popup GIS (`initTokenClient`).
+4. Le **Client ID** de la console doit correspondre à celui renseigné dans
+   l'app (**Réglages → Constantes → ID client Google OAuth (web)**).
+5. Dev local : ajouter aussi `http://localhost:<port>` dans les mêmes origins.
