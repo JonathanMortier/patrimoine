@@ -16,6 +16,7 @@ import {
   parseBackupString,
   restoreBackupData,
   backupFileName,
+  MAX_PBKDF2_ITERATIONS,
 } from '../backup'
 
 const ITER = 2_000
@@ -69,6 +70,29 @@ describe('backup : chiffrement autonome', () => {
     await expect(parseBackupFile(data, 'mauvais')).rejects.toThrow(BackupError)
     const tampered = { ...data, payload: data.payload.slice(0, -4) + 'AAAA' }
     await expect(parseBackupFile(tampered, 'pw')).rejects.toThrow()
+  })
+
+  it('refuse un nombre d’itérations PBKDF2 hors bornes (anti-DoS)', async () => {
+    const data = await createBackupFile(JSON.stringify({ exportedAt: 'x' }), 'pw', ITER)
+    await expect(parseBackupFile({ ...data, iterations: 0 }, 'pw')).rejects.toThrow(BackupError)
+    await expect(parseBackupFile({ ...data, iterations: -5 }, 'pw')).rejects.toThrow(BackupError)
+    await expect(parseBackupFile({ ...data, iterations: 1.5 }, 'pw')).rejects.toThrow(BackupError)
+    await expect(parseBackupFile({ ...data, iterations: MAX_PBKDF2_ITERATIONS + 1 }, 'pw')).rejects.toThrow(BackupError)
+  })
+
+  it('rejette une sauvegarde restaurée dont la structure est invalide', async () => {
+    await setup('motdepasse', ITER)
+    const validConstantes = {
+      btcEur: 0, btcUsd: 77429, eth: 0, sol: 0, convUsdEur: 1.14, plafondPea: 150000,
+      dateOuverturePea: '', tauxRendement: 0.07, mensualiteTradeRep: 710, mensualiteFortuneo: 600,
+      googleClientId: '',
+    }
+    await expect(restoreBackupData(null)).rejects.toThrow(BackupError)
+    await expect(restoreBackupData('x')).rejects.toThrow(BackupError)
+    await expect(restoreBackupData({ exportedAt: 'x', constantes: {}, months: [], credits: [] })).rejects.toThrow(BackupError)
+    await expect(restoreBackupData({ exportedAt: 'x', constantes: validConstantes, months: [{ id: 'garbage', bourse: {} }], credits: [] })).rejects.toThrow(BackupError)
+    await expect(restoreBackupData({ exportedAt: 'x', constantes: validConstantes, months: [{ id: '2026-01', bourse: { cto: 'NaN' } }], credits: [] })).rejects.toThrow(BackupError)
+    await expect(restoreBackupData({ exportedAt: 'x', constantes: validConstantes, months: [], credits: [{ nom: '' }] })).rejects.toThrow(BackupError)
   })
 
   it('restaure : remplace les mois, prêts et constantes', async () => {

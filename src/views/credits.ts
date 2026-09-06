@@ -1,6 +1,6 @@
 import { creditsRepo, loanKey, creditsPrefsRepo } from '../db/repos'
 import { monthsUnderPrincipal, dateUnderPrincipal } from '../calc/credits'
-import { fmtEuro, fmtPct } from '../utils/format'
+import { escapeHtml, fmtEuro, fmtPct } from '../utils/format'
 import type { Loan } from '../db/schema'
 
 const PALIER = 250000
@@ -78,7 +78,7 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
       <th class="row-label"></th>
       ${cols.map((c) => {
         const label =
-          c.type === 'sub' ? `Sous-total` : c.type === 'grand' ? 'Total' : `<small>${isFirstOfProp.has(loanKey(c.loan)) ? c.prop : ''}</small>${c.loan.numero}`
+          c.type === 'sub' ? `Sous-total` : c.type === 'grand' ? 'Total' : `<small>${isFirstOfProp.has(loanKey(c.loan)) ? escapeHtml(c.prop) : ''}</small>${escapeHtml(c.loan.numero)}`
         const cls = c.type === 'sub' ? 'class="col-sub"' : c.type === 'grand' ? 'class="col-grand"' : ''
         return `<th ${cls}>${label}</th>`
       }).join('')}
@@ -90,7 +90,7 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
     cell(content, c.type === 'loan' ? '' : c.type === 'sub' ? 'sub-content' : 'grand-content')
 
   const rows: Record<string, string[]> = {
-    maison: cols.map((c) => (c.type === 'loan' ? (isFirstOfProp.has(loanKey(c.loan)) ? c.prop : '') : c.type === 'sub' ? c.prop : '')),
+    maison: cols.map((c) => (c.type === 'loan' ? (isFirstOfProp.has(loanKey(c.loan)) ? escapeHtml(c.prop) : '') : c.type === 'sub' ? escapeHtml(c.prop) : '')),
     numero: cols.map((c) => (c.type === 'loan' ? String(c.loan.numero) : '')),
     depart: cols.map((c) => (c.type === 'loan' ? monthLabel(c.loan.dateDepart) : '')),
     fin: cols.map((c) => (c.type === 'loan' ? monthLabel(c.loan.dateFin) : '')),

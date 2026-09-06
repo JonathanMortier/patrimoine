@@ -1,7 +1,7 @@
 import { changePassword, PasswordError, LockedError } from '../crypto/security'
 import { constantesRepo } from '../db/repos/constantes'
 import type { Constantes } from '../db/schema'
-import { fmtAmount } from '../utils/format'
+import { escapeAttr, fmtAmount } from '../utils/format'
 import { fetchMarketPrices, MarketFetchError } from '../utils/market'
 
 type FieldDef = {
@@ -54,7 +54,7 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
   const textFieldHtml = (def: FieldDef): string => `
     <label class="field">
       <span>${def.label}${def.hint ? ` — <em>${def.hint}</em>` : ''}</span>
-      <input type="text" name="${def.key}" value="${(constantes[def.key] as string) ?? ''}" autocomplete="off" spellcheck="false" />
+      <input type="text" name="${def.key}" value="${escapeAttr((constantes[def.key] as string) ?? '')}" autocomplete="off" spellcheck="false" />
     </label>`
 
   const convHtml = `
@@ -165,6 +165,12 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
 
     if (!Number.isFinite(next.convUsdEur) || next.convUsdEur <= 0) {
       constMsg.textContent = 'Conversion invalide (nombre strictement positif).'
+      constMsg.className = 'msg err'
+      return
+    }
+
+    if (next.googleClientId && !/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(next.googleClientId)) {
+      constMsg.textContent = 'ID client Google OAuth invalide (doit se terminer par .apps.googleusercontent.com).'
       constMsg.className = 'msg err'
       return
     }
