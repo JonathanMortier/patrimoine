@@ -7,7 +7,7 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
 import { mountApp, type Route } from '../../app'
 import { deleteDb } from '../../db'
-import { setup } from '../../crypto/security'
+import { setup, lock, unlock, isUnlocked } from '../../crypto/security'
 import { constantesRepo, DEFAULT_CONSTANTES } from '../../db/repos/constantes'
 
 const PASSWORD = 'test-secret'
@@ -207,5 +207,75 @@ describe('Réglages : bouton « Récupérer les prix en ligne »', () => {
 
     view().querySelector<HTMLButtonElement>('#fetch-market')!.click()
     await vi.waitFor(() => expect(view().textContent).toContain('Impossible de récupérer'))
+  })
+})
+
+describe('Réglages : changement de mot de passe', () => {
+  beforeEach(async () => {
+    await deleteDb()
+    await setup(PASSWORD)
+    document.body.innerHTML = '<div id="app"></div>'
+    mountApp(document.getElementById('app')!)
+    tabFor('reglages').click()
+    await vi.waitFor(() => expect(view().textContent).toContain('Changer le mot de passe'))
+  })
+
+  afterEach(async () => {
+    await new Promise((r) => setTimeout(r, 20))
+  })
+
+  function setPwField(name: string, value: string): void {
+    const el = view().querySelector<HTMLInputElement>(`#pw-form [name="${name}"]`)!
+    el.value = value
+  }
+
+  function submitPwForm(): void {
+    view().querySelector<HTMLFormElement>('#pw-form')!.dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true }),
+    )
+  }
+
+  it('change le mot de passe : le nouveau déverrouille, l’ancien est rejeté', async () => {
+    setPwField('old', PASSWORD)
+    setPwField('nw', 'nouveau-mdp-4')
+    setPwField('confirm', 'nouveau-mdp-4')
+    submitPwForm()
+
+    await vi.waitFor(() => expect(view().textContent).toContain('Mot de passe changé'))
+    await new Promise((r) => setTimeout(r, 20))
+
+    lock()
+    expect(isUnlocked()).toBe(false)
+    await expect(unlock('nouveau-mdp-4')).resolves.toBeUndefined()
+    expect(isUnlocked()).toBe(true)
+  })
+
+  it('refuse un ancien mot de passe incorrect', async () => {
+    setPwField('old', 'mauvais-mdp')
+    setPwField('nw', 'nouveau-mdp-4')
+    setPwField('confirm', 'nouveau-mdp-4')
+    submitPwForm()
+
+    await vi.waitFor(() => expect(view().textContent).toContain('Ancien mot de passe incorrect'))
+    await new Promise((r) => setTimeout(r, 20))
+
+    lock()
+    await expect(unlock(PASSWORD)).resolves.toBeUndefined()
+    expect(isUnlocked()).toBe(true)
+  })
+
+  it('refuse des nouvelles valeurs non concordantes sans rien changer', async () => {
+    setPwField('old', PASSWORD)
+    setPwField('nw', 'abcde1')
+    setPwField('confirm', 'abcde2')
+    submitPwForm()
+
+    await vi.waitFor(() => expect(view().textContent).toContain('ne correspondent pas'))
+    await new Promise((r) => setTimeout(r, 20))
+
+    lock()
+    await expect(unlock(PASSWORD)).resolves.toBeUndefined()
+    await expect(unlock('abcde1')).rejects.toThrow()
+    return lock()
   })
 })

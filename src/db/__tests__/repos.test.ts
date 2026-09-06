@@ -86,6 +86,13 @@ describe('repositories', () => {
       expect(read.mensualiteTradeRep).toBe(710)
       expect(DEFAULT_CONSTANTES.tauxRendement).toBe(0.07)
     })
+
+    it('remet toutes les constantes aux valeurs par défaut', async () => {
+      await constantesRepo.save({ ...DEFAULT_CONSTANTES, tauxRendement: 0.12, googleClientId: 'x.apps.googleusercontent.com' })
+      await constantesRepo.reset()
+      expect(await constantesRepo.get()).toEqual(DEFAULT_CONSTANTES)
+      expect(DEFAULT_CONSTANTES.tauxRendement).toBe(0.07)
+    })
   })
 
   describe('creditsRepo', () => {
