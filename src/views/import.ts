@@ -4,8 +4,9 @@ import { creditsRepo } from '../db/repos/credits'
 import { parseSheet, mergeDomain, type ParseResult, type SheetKind, formatMoney } from '../import/parsers'
 import { parseCreditSheet, toLoan, type CreditLoanInput } from '../import/credits'
 import { reconcileMonths, formatReconDiff } from '../import/reconcile'
-import { backupFileName, collectBackupData, createBackupJson, parseBackupString, restoreBackupData } from '../backup/backup'
+import { backupFileName, collectBackupData, createBackupJson, MAX_BACKUP_BYTES, parseBackupString, restoreBackupData } from '../backup/backup'
 import { DriveError, DRIVE_BACKUP_NAME, downloadBackupFile, findBackupFile, getAccessToken, uploadBackupFile } from '../utils/drive'
+import { escapeHtml } from '../utils/format'
 
 const KINDS: { id: SheetKind | 'credits'; label: string }[] = [
   { id: 'horsImmo', label: 'Hors immo' },
@@ -201,7 +202,7 @@ function renderCreditPreview(loans: CreditLoanInput[]): string {
   const head = '<tr><th>Maison</th><th>N° crédit</th><th>Départ</th><th>Fin</th><th>Taux</th><th>Mensualité</th><th>Total</th><th>Restant</th><th>% remb.</th></tr>'
   const body = loans
     .map((l) => `<tr>
-      <td>${l.nom}</td>
+      <td>${escapeHtml(l.nom)}</td>
       <td>${l.numero}</td>
       <td>${l.dateDepart ?? '—'}</td>
       <td>${l.dateFin ?? '—'}</td>
@@ -219,10 +220,10 @@ function renderPreview(r: ParseResult): string {
   if (r.columns.length === 0) {
     return `<h2>Aperçu</h2><p class="muted">Aucune colonne reconnue pour « ${kindLabel()} ».</p>`
   }
-  const head = `<tr><th>Mois</th>${r.columns.map((c) => `<th>${c.header}</th>`).join('')}</tr>`
+  const head = `<tr><th>Mois</th>${r.columns.map((c) => `<th>${escapeHtml(c.header)}</th>`).join('')}</tr>`
   const body = r.rows
     .slice(0, 24)
-    .map((row) => `<tr><td>${row.id}</td>${r.columns.map((c) => `<td>${formatMoney(row.values[c.target])}</td>`).join('')}</tr>`)
+    .map((row) => `<tr><td>${escapeHtml(row.id)}</td>${r.columns.map((c) => `<td>${formatMoney(row.values[c.target])}</td>`).join('')}</tr>`)
     .join('')
   const extra = r.skipped.length > 0 ? `<p class="muted">${r.skipped.length} ligne(s) ignorée(s) (sans date ou sans donnée).</p>` : ''
   return `<h2>Aperçu (${r.rows.length} mois)</h2>
@@ -342,6 +343,10 @@ function bindBackup(view: HTMLElement): void {
     const file = fileInput.files?.[0]
     fileInput.value = ''
     if (!file) return
+    if (file.size > MAX_BACKUP_BYTES) {
+      setMsg(bkMsg, `Fichier trop volumineux (limite ${Math.round(MAX_BACKUP_BYTES / 1024 / 1024)} Mo).`)
+      return
+    }
     const password = await askPassword(view, 'Importer une sauvegarde', 'Mot de passe de chiffrement de ce fichier (mot de passe d’import).')
     if (password === null) return
     try {

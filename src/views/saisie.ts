@@ -13,7 +13,7 @@ import {
   type DomainKey,
   type MonthLive,
 } from './fields'
-import { fmtEuro } from '../utils/format'
+import { escapeHtml, escapeAttr, fmtEuro } from '../utils/format'
 
 const CREDITS_GROUP_ID = 'creditsRestant'
 
@@ -50,7 +50,7 @@ export async function renderSaisie(view: HTMLElement): Promise<void> {
     .map((l) => {
       const key = loanKey(l)
       const v = creditsRestant[key] ?? l.restant
-      return `<label class="field"><span>${l.nom} — N°${l.numero}</span><input type="number" inputmode="decimal" step="0.01" name="creditsRestant.${key}" data-credit-key="${key}" value="${String(v)}" /></label>`
+      return `<label class="field"><span>${escapeHtml(l.nom)} — N°${l.numero}</span><input type="number" inputmode="decimal" step="0.01" name="creditsRestant.${escapeAttr(key)}" data-credit-key="${escapeAttr(key)}" value="${String(v)}" /></label>`
     })
     .join('')
   const creditsStepTotal = loansSorted.reduce((a, l) => a + (creditsRestant[loanKey(l)] ?? l.restant), 0)
@@ -270,9 +270,10 @@ function creditsInputTotal(view: HTMLElement): number {
 
 function collectCreditsRestant(view: HTMLElement, loans: Loan[]): Record<string, number> {
   const out: Record<string, number> = {}
+  const fields = view.querySelectorAll<HTMLInputElement>('[data-credit-key]')
   for (const loan of loans) {
     const key = loanKey(loan)
-    const input = view.querySelector<HTMLInputElement>(`[data-credit-key="${key}"]`)
+    const input = [...fields].find((el) => el.dataset.creditKey === key)
     if (input) out[key] = parseAmount(input.value)
   }
   return out

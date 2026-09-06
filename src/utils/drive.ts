@@ -1,10 +1,11 @@
-import { BACKUP_FILE_PREFIX } from '../backup/backup'
+import { BACKUP_FILE_PREFIX, MAX_BACKUP_BYTES } from '../backup/backup'
 
 export class DriveError extends Error {}
 
 export const DRIVE_BACKUP_NAME = `${BACKUP_FILE_PREFIX}-current.json`
 
 const GIS_SRC = 'https://accounts.google.com/gsi/client'
+const GIS_SRI = 'sha256-z3SpzgoixxeBGMojqwbNabfIvMVHMYPxlrODq67+Yko='
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 const FILES_URL = 'https://www.googleapis.com/drive/v3/files'
 const UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files'
@@ -34,6 +35,8 @@ export function loadGis(): Promise<void> {
   gisPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script')
     script.async = true
+    script.crossOrigin = 'anonymous'
+    script.integrity = GIS_SRI
     script.onload = () => resolve()
     script.onerror = () => reject(new DriveError('Impossible de charger Google Identity Services.'))
     script.src = GIS_SRC
@@ -132,5 +135,13 @@ export async function uploadBackupFile(
 
 export async function downloadBackupFile(token: string, ref: DriveFileRef): Promise<string> {
   const res = await call(token, `${FILES_URL}/${ref.id}?alt=media`)
-  return res.text()
+  const contentLength = Number(res.headers?.get?.('content-length') ?? 0)
+  if (contentLength > MAX_BACKUP_BYTES) {
+    throw new DriveError('Sauvegarde Drive trop volumineuse.')
+  }
+  const text = await res.text()
+  if (text.length > MAX_BACKUP_BYTES) {
+    throw new DriveError('Sauvegarde Drive trop volumineuse.')
+  }
+  return text
 }
