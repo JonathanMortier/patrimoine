@@ -54,6 +54,22 @@ describe('dashboardSeries', () => {
     expect(s[0].partBtc).toBeCloseTo((0.1 * 50000) / cryptoTotal, 5)
   })
 
+  it('calcule les variations par domaine vs mois précédent', () => {
+    const a = month('2026-06', { cto: 1000, pea: 500, investi: 400, tradeRep: 100 })
+    const b = month('2026-07', { cto: 1500, pea: 600, investi: 500, tradeRep: 80 })
+    const s = dashboardSeries([b, a], CONST)
+
+    expect(s[0].bourseVar).toBeNull()
+    expect(s[0].assuranceVieVar).toBeNull()
+    expect(s[0].crowdlendingVar).toBeNull()
+    expect(s[0].cryptoVar).toBeNull()
+
+    expect(s[1].bourseVar).toBe(600)
+    expect(s[1].assuranceVieVar).toBe(0)
+    expect(s[1].crowdlendingVar).toBe(100)
+    expect(s[1].cryptoVar).toBe(-20)
+  })
+
   it('labels courts sont au format MM/YY', () => {
     const m = month('2026-01')
     const s = dashboardSeries([m], CONST)

@@ -1,4 +1,4 @@
-import { creditsRepo, loanKey, creditsPrefsRepo } from '../db/repos'
+import { creditsRepo, creditsPrefsRepo } from '../db/repos'
 import { monthsUnderPrincipal, dateUnderPrincipal } from '../calc/credits'
 import { escapeHtml, fmtEuro, fmtPct } from '../utils/format'
 import type { Loan } from '../db/schema'
@@ -6,7 +6,6 @@ import type { Loan } from '../db/schema'
 const PALIER = 250000
 
 const ATTRS: { id: string; label: string; fixed?: boolean }[] = [
-  { id: 'maison', label: 'Maison' },
   { id: 'numero', label: 'N° crédit' },
   { id: 'depart', label: 'Départ' },
   { id: 'fin', label: 'Fin' },
@@ -70,43 +69,55 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
   const monthsPalier = monthsUnderPrincipal(totalRestant, totalMen, PALIER)
   const grandPct = totalMontant > 0 ? ((totalMontant - totalRestant) / totalMontant) * 100 : 0
 
-  const isFirstOfProp = new Set<string>()
-  for (const [, group] of byProp) isFirstOfProp.add(loanKey(group[0]))
+  const attrCls = (attrId: string): string => (hidden.has(attrId) ? ' hidden' : '')
+
+  const valueFor = (c: Col, attrId: string): string => {
+    if (c.type === 'sub') {
+      switch (attrId) {
+        case 'montant': return fmtEuro(c.men)
+        case 'total': return fmtEuro(c.montant)
+        case 'restant': return fmtEuro(c.restant)
+        case 'rembourse': return fmtPct(c.montant > 0 ? ((c.montant - c.restant) / c.montant) * 100 : 0)
+        default: return ''
+      }
+    }
+    if (c.type === 'grand') {
+      switch (attrId) {
+        case 'montant': return fmtEuro(c.men)
+        case 'total': return fmtEuro(c.montant)
+        case 'restant': return fmtEuro(c.restant)
+        case 'rembourse': return fmtPct(c.montant > 0 ? ((c.montant - c.restant) / c.montant) * 100 : 0)
+        default: return ''
+      }
+    }
+    const l = c.loan
+    switch (attrId) {
+      case 'numero': return String(l.numero)
+      case 'depart': return monthLabel(l.dateDepart)
+      case 'fin': return monthLabel(l.dateFin)
+      case 'taux': return fmtTaux(l.taux)
+      case 'montant': return fmtEuro(l.mensualite)
+      case 'total': return fmtEuro(l.montant)
+      case 'restant': return fmtEuro(l.restant)
+      case 'rembourse': return fmtPct(pctRemb(l) * 100)
+      default: return ''
+    }
+  }
+
+  const rowLabel = (c: Col): string =>
+    c.type === 'sub' ? 'Sous-total' : c.type === 'grand' ? 'Total' : escapeHtml(c.prop)
 
   const head = `
     <tr>
       <th class="row-label"></th>
-      ${cols.map((c) => {
-        const label =
-          c.type === 'sub' ? `Sous-total` : c.type === 'grand' ? 'Total' : `<small>${isFirstOfProp.has(loanKey(c.loan)) ? escapeHtml(c.prop) : ''}</small>${escapeHtml(c.loan.numero)}`
-        const cls = c.type === 'sub' ? 'class="col-sub"' : c.type === 'grand' ? 'class="col-grand"' : ''
-        return `<th ${cls}>${label}</th>`
-      }).join('')}
+      ${ATTRS.map((a) => `<th data-attr="${a.id}"${attrCls(a.id)}>${a.label}</th>`).join('')}
     </tr>`
 
-  const cell = (content: string, cls = ''): string => `<td class="${cls}">${content}</td>`
-
-  const filled = (c: Col, content: string): string =>
-    cell(content, c.type === 'loan' ? '' : c.type === 'sub' ? 'sub-content' : 'grand-content')
-
-  const rows: Record<string, string[]> = {
-    maison: cols.map((c) => (c.type === 'loan' ? (isFirstOfProp.has(loanKey(c.loan)) ? escapeHtml(c.prop) : '') : c.type === 'sub' ? escapeHtml(c.prop) : '')),
-    numero: cols.map((c) => (c.type === 'loan' ? String(c.loan.numero) : '')),
-    depart: cols.map((c) => (c.type === 'loan' ? monthLabel(c.loan.dateDepart) : '')),
-    fin: cols.map((c) => (c.type === 'loan' ? monthLabel(c.loan.dateFin) : '')),
-    taux: cols.map((c) => (c.type === 'loan' ? fmtTaux(c.loan.taux) : '')),
-    montant: cols.map((c) => (c.type === 'loan' ? fmtEuro(c.loan.mensualite) : fmtEuro(c.men))),
-    total: cols.map((c) => (c.type === 'loan' ? fmtEuro(c.loan.montant) : fmtEuro(c.montant))),
-    restant: cols.map((c) => (c.type === 'loan' ? fmtEuro(c.loan.restant) : fmtEuro(c.restant))),
-    rembourse: cols.map((c) => (c.type === 'loan' ? fmtPct(pctRemb(c.loan) * 100) : fmtPct(c.montant > 0 ? ((c.montant - c.restant) / c.montant) * 100 : 0))),
-  }
-
-  const rowHtml = (id: string, cells: string[]): string =>
-    `<tr data-attr="${id}"${hidden.has(id) ? ' class="hidden"' : ''}><th class="row-label">${ATTRS.find((a) => a.id === id)!.label}</th>${cells
-      .map((c, i) => filled(cols[i], c))
-      .join('')}</tr>`
-
-  const tbody = ATTRS.map((a) => rowHtml(a.id, rows[a.id])).join('')
+  const bodyRows = cols.map((c) => {
+    const rowCls = c.type === 'sub' ? 'row-sub' : c.type === 'grand' ? 'row-grand' : ''
+    const cells = ATTRS.map((a) => `<td data-attr="${a.id}"${attrCls(a.id)}>${valueFor(c, a.id)}</td>`).join('')
+    return `<tr class="${rowCls}"><th class="row-label">${rowLabel(c)}</th>${cells}</tr>`
+  }).join('')
 
   const toggles = ATTRS.filter((a) => !a.fixed)
     .map(
@@ -124,9 +135,9 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
       <div class="unchips" role="group" aria-label="Colonnes à afficher">${toggles}</div>
       <div class="table-wrap"><table class="grid transposed">
         <thead>${head}</thead>
-        <tbody>${tbody}</tbody>
+        <tbody>${bodyRows}</tbody>
         <tfoot>
-          <tr><th class="row-label">Total général</th><td class="grand-content" colspan="${cols.length}">${fmtEuro(totalRestant)} restant · ${fmtPct(grandPct)} remboursé</td></tr>
+          <tr><th class="row-label">Total général</th><td class="grand-content" colspan="${ATTRS.length + 1}">${fmtEuro(totalRestant)} restant · ${fmtPct(grandPct)} remboursé</td></tr>
         </tfoot>
       </table></div>
       <p class="muted">Temps restant pour passer sous les ${fmtEuro(PALIER)} d'emprunt : <strong>${monthsPalier > 0 ? `${monthsPalier} mois (${dateUnderPrincipal(new Date().toISOString().slice(0, 10), monthsPalier)})` : 'déjà sous le palier'}</strong></p>
@@ -137,8 +148,9 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
   view.querySelectorAll<HTMLInputElement>('.chip input').forEach((input) => {
     input.addEventListener('change', () => {
       const id = input.dataset.attr!
-      const tr = view.querySelector<HTMLTableRowElement>(`tr[data-attr="${id}"]`)
-      if (tr) tr.classList.toggle('hidden', !input.checked)
+      view.querySelectorAll<HTMLElement>(`table [data-attr="${id}"]`).forEach((el) => {
+        el.classList.toggle('hidden', !input.checked)
+      })
       const next = new Set(hidden)
       if (input.checked) next.delete(id)
       else next.add(id)
