@@ -6,7 +6,6 @@ import type { Loan } from '../db/schema'
 const PALIER = 250000
 
 const ATTRS: { id: string; label: string; fixed?: boolean }[] = [
-  { id: 'maison', label: 'Maison' },
   { id: 'numero', label: 'N° crédit' },
   { id: 'depart', label: 'Départ' },
   { id: 'fin', label: 'Fin' },
@@ -75,7 +74,6 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
   const valueFor = (c: Col, attrId: string): string => {
     if (c.type === 'sub') {
       switch (attrId) {
-        case 'maison': return escapeHtml(c.prop)
         case 'montant': return fmtEuro(c.men)
         case 'total': return fmtEuro(c.montant)
         case 'restant': return fmtEuro(c.restant)
@@ -94,7 +92,6 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
     }
     const l = c.loan
     switch (attrId) {
-      case 'maison': return escapeHtml(c.prop)
       case 'numero': return String(l.numero)
       case 'depart': return monthLabel(l.dateDepart)
       case 'fin': return monthLabel(l.dateFin)
