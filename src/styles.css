@@ -510,7 +510,7 @@ table.grid .prop-val {
   padding: 4px 6px;
 }
 
-/* Crédits immo — tableau transposé (attributs en lignes, prêts en colonnes) */
+/* Crédits immo — tableaux transposés (attributs en colonnes, prêts en lignes) */
 table.grid.transposed th.row-label {
   text-align: left;
   color: var(--muted);
@@ -522,32 +522,22 @@ table.grid.transposed th.row-label {
   z-index: 1;
 }
 
-table.grid.transposed tr.hidden {
+table.grid th.hidden,
+table.grid td.hidden {
   display: none;
 }
 
-table.grid.transposed th.col-sub,
-table.grid.transposed td.sub-content {
+table.grid.transposed tr.row-sub > th,
+table.grid.transposed tr.row-sub > td {
   background: var(--surface-2);
-}
-
-table.grid.transposed th.col-grand,
-table.grid.transposed td.grand-content {
-  background: var(--surface-3);
-  font-weight: 600;
-}
-
-table.grid.transposed td.sub-content,
-table.grid.transposed td.grand-content,
-table.grid.transposed th.col-sub,
-table.grid.transposed th.col-grand {
   color: inherit;
 }
 
-table.grid.transposed th.col-sub,
-table.grid.transposed th.col-grand {
+table.grid.transposed tr.row-grand > th,
+table.grid.transposed tr.row-grand > td {
+  background: var(--surface-3);
   font-weight: 600;
-  text-align: right;
+  color: inherit;
 }
 
 .unchips {
