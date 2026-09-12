@@ -1,0 +1,65 @@
+name: Coverage
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  coverage-badge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npx vitest run --coverage
+
+      - name: Generate coverage badge
+        run: node scripts/generateCoverageBadge.mjs
+
+      - name: Commit coverage badge if changed
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'badges/coverage.svg';
+            if (!fs.existsSync(path)) {
+              core.info('Badge file not found, skipping.');
+              return;
+            }
+            const { data: current } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path,
+              ref: context.ref,
+            }).catch(() => ({ data: null }));
+
+            const content = fs.readFileSync(path, 'base64');
+            if (current && current.content === content) {
+              core.info('Badge unchanged, skipping commit.');
+              return;
+            }
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path,
+              message: 'chore: update coverage badge',
+              content,
+              sha: current ? current.sha : undefined,
+            });
+            core.info('Coverage badge committed.');

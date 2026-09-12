@@ -8,6 +8,9 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Test coverage
+coverage/
+
 # Données financières personnelles
 docs/Patrimoine.ods
 /patrimoine.ods
