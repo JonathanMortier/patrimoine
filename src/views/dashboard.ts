@@ -27,6 +27,12 @@ function kpi(label: string, value: string, sub = ''): string {
   return `<div class="kpi"><span class="kpi-label">${label}</span><span class="kpi-val">${value}</span>${sub ? `<span class="kpi-sub">${sub}</span>` : ''}</div>`
 }
 
+function varSpan(v: number | null): string {
+  return v === null
+    ? ''
+    : `<span class="var ${v >= 0 ? 'pos' : 'neg'}">${v >= 0 ? '▲' : '▼'} ${fmtEuro(Math.abs(v))}</span>`
+}
+
 export async function renderDashboard(view: HTMLElement): Promise<void> {
   destroyCharts()
   const [constantes, months, loans] = await Promise.all([
@@ -48,9 +54,7 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
     return
   }
 
-  const variation = last.variation === null
-    ? ''
-    : `<span class="var ${last.variation >= 0 ? 'pos' : 'neg'}">${last.variation >= 0 ? '▲' : '▼'} ${fmtEuro(Math.abs(last.variation))}</span>`
+  const variation = varSpan(last.variation)
 
   // Remplissage PEA = valeur nette du PEA (valeur − plus value) / plafond
   const peaNet = Math.max(0, last.pea - last.plusValue)
@@ -96,10 +100,10 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
         ${kpi('Hors immo', fmtEuro(last.horsImmo), variation)}
         ${kpi('Brut', fmtEuro(brut), `+ immo ${fmtEuro(immoValeur)}`)}
         ${kpi('Net', fmtEuro(net), `− dettes ${fmtEuro(dette)}`)}
-        ${kpi('Bourse', fmtEuro(last.bourse))}
-        ${kpi('Assurance Vie', fmtEuro(last.assuranceVie))}
-        ${kpi('Crowdfunding', fmtEuro(last.crowdlending))}
-        ${kpi('Crypto', fmtEuro(last.crypto))}
+        ${kpi('Bourse', fmtEuro(last.bourse), varSpan(last.bourseVar))}
+        ${kpi('Assurance Vie', fmtEuro(last.assuranceVie), varSpan(last.assuranceVieVar))}
+        ${kpi('Crowdfunding', fmtEuro(last.crowdlending), varSpan(last.crowdlendingVar))}
+        ${kpi('Crypto', fmtEuro(last.crypto), varSpan(last.cryptoVar))}
       </div>
     </section>
 

@@ -17,12 +17,20 @@ export interface DashboardPoint {
   partBtc: number | null
   btcValueEur: number
   variation: number | null
+  bourseVar: number | null
+  assuranceVieVar: number | null
+  crowdlendingVar: number | null
+  cryptoVar: number | null
 }
 
 /** Construit une série chronologique dérivée pour le dashboard. */
 export function dashboardSeries(months: MonthRecord[], constantes: Constantes): DashboardPoint[] {
   const sorted = [...months].sort((a, b) => compareMonthIds(a.id, b.id))
   let prevTotal: number | null = null
+  let prevBourse: number | null = null
+  let prevAV: number | null = null
+  let prevCrowd: number | null = null
+  let prevCrypto: number | null = null
   return sorted.map((m) => {
     const d = computeDerivedMonth(m, constantes, prevTotal)
     const liq = (() => {
@@ -47,8 +55,16 @@ export function dashboardSeries(months: MonthRecord[], constantes: Constantes): 
       partBtc: d.partBtc,
       btcValueEur: d.partBtc === null ? 0 : d.partBtc * d.crypto,
       variation: d.horsImmo.variation,
+      bourseVar: prevBourse === null ? null : d.bourse - prevBourse,
+      assuranceVieVar: prevAV === null ? null : d.assuranceVie - prevAV,
+      crowdlendingVar: prevCrowd === null ? null : d.crowdlending.total - prevCrowd,
+      cryptoVar: prevCrypto === null ? null : d.crypto - prevCrypto,
     }
     prevTotal = d.horsImmo.total
+    prevBourse = d.bourse
+    prevAV = d.assuranceVie
+    prevCrowd = d.crowdlending.total
+    prevCrypto = d.crypto
     return point
   })
 }
