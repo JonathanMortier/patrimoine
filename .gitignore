@@ -8,9 +8,9 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Données financières personnelles
+# Test coverage
+coverage/
+
+# Données financières personnelles (ODS maîtres réels)
 docs/Patrimoine.ods
 /patrimoine.ods
-# Dumps réels issus de l'ODS : ne pas versionner (données perso).
-# À remplacer par des fixtures fictives si le repo doit être cloné.
-src/import/__fixtures__/

@@ -116,15 +116,18 @@ describe('navigation avec mois déjà enregistrés', () => {
     tabFor('credits').click()
     await vi.waitFor(() => expect(view().textContent).toContain('Crédits immo'))
 
-    const departRow = view().querySelector<HTMLTableRowElement>('tr[data-attr="depart"]')!
-    expect(departRow.classList.contains('hidden')).toBe(false)
+    const departTh = view().querySelector<HTMLTableHeaderCellElement>('thead th[data-attr="depart"]')!
+    expect(departTh.classList.contains('hidden')).toBe(false)
+    expect(view().querySelectorAll<HTMLElement>('td[data-attr="depart"]').length).toBeGreaterThan(0)
 
     const chip = view().querySelector<HTMLInputElement>('.chip input[data-attr="depart"]')!
     expect(chip.checked).toBe(true)
     chip.click()
 
-    expect(view().querySelector('tr[data-attr="depart"]')!.classList.contains('hidden')).toBe(true)
-    expect(view().querySelector('tr[data-attr="restant"]')!.classList.contains('hidden')).toBe(false)
+    expect(view().querySelector('thead th[data-attr="depart"]')!.classList.contains('hidden')).toBe(true)
+    const departCells = view().querySelectorAll<HTMLElement>('td[data-attr="depart"]')
+    for (const cell of departCells) expect(cell.classList.contains('hidden')).toBe(true)
+    expect(view().querySelector('thead th[data-attr="restant"]')!.classList.contains('hidden')).toBe(false)
     expect(view().querySelector<HTMLInputElement>('.chip input[data-attr="restant"]')).toBeNull()
   })
 

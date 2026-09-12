@@ -51,7 +51,7 @@ export function mountApp(root: HTMLElement): void {
     bound = true
   }
 
-  const nav = ROUTES.map((r) => `          <button class="tab" data-route="${r.id}">${r.icon}<span>${r.label}</span></button>`).join('\n')
+  const nav = ROUTES.map((r) => `          <button class="tab" data-route="${r.id}"><span class="icon">${r.icon}</span><span>${r.label}</span></button>`).join('\n')
 
   root.innerHTML = `
     <header class="topbar">
