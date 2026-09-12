@@ -597,3 +597,65 @@ table.grid.transposed tr.row-grand > td {
     font-size: 15px;
   }
 }
+
+/* ——— Paysage : on profite de la largeur ——— */
+@media (orientation: landscape) {
+  #app {
+    max-width: 1100px;
+  }
+
+  #view {
+    padding: 12px 20px;
+  }
+
+  .kpis {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ——— Téléphone en paysage (écran bas) : on compacte pour gagner de la hauteur ——— */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root {
+    --topbar-h: 44px;
+    --tabbar-h: 56px;
+  }
+
+  .tab .icon {
+    font-size: 30px;
+  }
+
+  .card {
+    padding: 12px;
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+
+  .kpi {
+    padding: 8px;
+  }
+
+  .kpi-val {
+    font-size: 15px;
+  }
+
+  .chart-box {
+    height: 180px;
+  }
+
+  .chart-box-donut {
+    height: 150px;
+  }
+
+  .auth-card {
+    padding: 16px;
+  }
+
+  .modal {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+
+  .grid2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
