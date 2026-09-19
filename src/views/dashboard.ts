@@ -119,16 +119,17 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
 
     <section class="card">
       <h2>Évolution mensuelle</h2>
-      <div class="chart-box"><canvas id="chart-evol"></canvas></div>
+      <div class="chart-box"><canvas id="chart-evol" role="img" aria-label="Courbes de l'évolution mensuelle par domaine ; les valeurs des derniers mois sont dans le tableau ci-dessous"></canvas></div>
       <div class="table-wrap"><table class="grid">
-        <thead><tr><th>Mois</th><th>Bourse</th><th>AV</th><th>Crowd.</th><th>Crypto</th><th>Hors immo</th></tr></thead>
+        <caption class="sr-only">Valeurs des six derniers mois</caption>
+        <thead><tr><th scope="col">Mois</th><th scope="col">Bourse</th><th scope="col">AV</th><th scope="col">Crowd.</th><th scope="col">Crypto</th><th scope="col">Hors immo</th></tr></thead>
         <tbody>${fallbackRows}</tbody>
       </table></div>
     </section>
 
     <section class="card">
       <h2>Répartition — ${last.short}</h2>
-      <div class="chart-box chart-box-donut"><canvas id="chart-repart"></canvas></div>
+      <div class="chart-box chart-box-donut"><canvas id="chart-repart" role="img" aria-label="Répartition du patrimoine hors immobilier ; le détail est listé ci-dessous"></canvas></div>
       ${slices.map((s) => `<div class="row"><span class="muted">${s.label}</span><span class="step-total">${fmtEuro(s.value)}</span></div>`).join('')}
     </section>
   `

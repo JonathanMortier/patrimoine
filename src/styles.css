@@ -124,20 +124,6 @@ textarea:focus-visible {
   padding: 16px;
 }
 
-.placeholder {
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
-  background: var(--surface);
-  color: var(--muted);
-}
-
-.placeholder h2 {
-  margin: 0 0 8px;
-  color: var(--text);
-  font-size: 16px;
-}
-
 .tabbar {
   height: var(--tabbar-h);
   display: grid;

@@ -109,13 +109,13 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
   const head = `
     <tr>
       <th class="row-label" scope="col"><span class="sr-only">Prêt</span></th>
-      ${ATTRS.map((a) => `<th data-attr="${a.id}"${attrCls(a.id)}>${a.label}</th>`).join('')}
+      ${ATTRS.map((a) => `<th scope="col" data-attr="${a.id}"${attrCls(a.id)}>${a.label}</th>`).join('')}
     </tr>`
 
   const bodyRows = cols.map((c) => {
     const rowCls = c.type === 'sub' ? 'row-sub' : c.type === 'grand' ? 'row-grand' : ''
     const cells = ATTRS.map((a) => `<td data-attr="${a.id}"${attrCls(a.id)}>${valueFor(c, a.id)}</td>`).join('')
-    return `<tr class="${rowCls}"><th class="row-label">${rowLabel(c)}</th>${cells}</tr>`
+    return `<tr class="${rowCls}"><th class="row-label" scope="row">${rowLabel(c)}</th>${cells}</tr>`
   }).join('')
 
   const toggles = ATTRS.filter((a) => !a.fixed)
@@ -133,6 +133,7 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
       <h2>Crédits immo</h2>
       <div class="unchips" role="group" aria-label="Colonnes à afficher">${toggles}</div>
       <div class="table-wrap"><table class="grid transposed">
+        <caption class="sr-only">Prêts immobiliers et leurs caractéristiques</caption>
         <thead>${head}</thead>
         <tbody>${bodyRows}</tbody>
       </table></div>

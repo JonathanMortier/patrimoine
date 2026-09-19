@@ -1,5 +1,6 @@
 import { lock } from './crypto/security'
 import { emitAuthEvent } from './events'
+import { escapeHtml } from './utils/format'
 import { renderReglages } from './views/reglages'
 import { renderImport } from './views/import'
 import { renderSaisie } from './views/saisie'
@@ -48,7 +49,7 @@ function showRenderError(view: HTMLElement, err: unknown): void {
   view.innerHTML = `
     <section class="card">
       <h2>Impossible d'afficher l'écran.</h2>
-      <p class="muted">${message}</p>
+      <p class="muted">${escapeHtml(message)}</p>
       <button id="err-retry" class="ghost">Réessayer</button>
     </section>
   `
@@ -140,22 +141,6 @@ function render(): void {
     void renderProjection(view).catch((err) => showRenderError(view, err))
     return
   }
-
-  const labels: Record<Route, string> = {
-    dashboard: 'Dashboard',
-    saisie: 'Assistant du 1er du mois',
-    import: 'Import initial',
-    credits: 'Crédits immo',
-    projection: 'Projection Bourse',
-    reglages: 'Réglages',
-  }
-
-  view.innerHTML = `
-    <section class="placeholder">
-      <h2>${labels[active]}</h2>
-      <p>Écran en construction.</p>
-    </section>
-  `
 }
 
 function rootTabs(): HTMLButtonElement[] {

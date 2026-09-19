@@ -95,13 +95,14 @@ export async function renderProjection(view: HTMLElement): Promise<void> {
         <div class="kpi"><span class="kpi-label">Objectif ${year + 1}</span><span class="kpi-val">${fmtEuro(monthly.at(-1)!.objectif)}</span><span class="kpi-sub">fin d'année</span></div>
         <div class="kpi"><span class="kpi-label">Salaire retrait 4 % (${lastYear.year})</span><span class="kpi-val">${fmtEuro(salaire)}</span><span class="kpi-sub">/mois</span></div>
       </div>
-      <div class="chart-box"><canvas id="proj-monthly"></canvas></div>
+      <div class="chart-box"><canvas id="proj-monthly" role="img" aria-label="Courbes de l'objectif et du réel mensuels ; les valeurs sont dans le tableau du détail mensuel"></canvas></div>
     </section>
 
     <section class="card">
       <h2>Détail mensuel — Objectif / Réel</h2>
       <div class="table-wrap"><table class="grid">
-        <thead><tr><th>Mois</th><th>Objectif</th><th>Réel</th></tr></thead>
+        <caption class="sr-only">Objectif et réel par mois</caption>
+        <thead><tr><th scope="col">Mois</th><th scope="col">Objectif</th><th scope="col">Réel</th></tr></thead>
         <tbody>${monthlyRows}</tbody>
       </table></div>
     </section>
@@ -109,15 +110,16 @@ export async function renderProjection(view: HTMLElement): Promise<void> {
     <section class="card">
       <h2>Évolution annuelle — Réel / Plus value / Évol.</h2>
       <p class="muted">Réél au 1er janvier (ou projection), plus value cumulée et son évolution annuelle.</p>
-      <div class="chart-box"><canvas id="proj-annual"></canvas></div>
+      <div class="chart-box"><canvas id="proj-annual" role="img" aria-label="Courbes annuelles du réel, de la plus value et de son évolution ; les valeurs sont dans le tableau de projection annuelle"></canvas></div>
     </section>
 
     <section class="card">
       <h2>Projection annuelle — 2025 → ${lastYear.year}</h2>
       <p class="muted">Objectif : récurrence ${Math.round(taux * 100)} %/an + ${fmtEuro(invest)}/mois depuis 2024 · Réel : valeurs au 1er janvier en base (*), projection ensuite.</p>
       <div class="table-wrap"><table class="grid">
+        <caption class="sr-only">Projection annuelle</caption>
         <thead><tr>
-          <th>Année</th>
+          <th scope="col">Année</th>
           <th>Objectif</th><th>Plus value</th><th>Évol. plus value</th>
           <th>Réel</th><th>Plus value</th><th>Évol. plus value</th>
         </tr></thead>
