@@ -172,12 +172,30 @@ textarea:focus-visible {
 }
 
 .tab .icon {
-  font-size: 35px;
+  display: flex;
   line-height: 1;
+}
+
+.tab .icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+#btn-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+}
+
+#btn-lock svg {
+  width: 20px;
+  height: 20px;
 }
 
 .tab.active {
   color: var(--accent);
+  box-shadow: inset 0 2px 0 var(--accent);
 }
 
 /* Auth (création / déverrouillage) */
@@ -454,9 +472,6 @@ table.grid th {
   margin-bottom: 4px;
 }
 
-.month-title {
-  font-style: italic;
-}
 
 .kpis {
   display: grid;
@@ -518,7 +533,7 @@ table.grid th {
 
 .step-head h2 {
   flex: 1;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .badge {
@@ -677,8 +692,13 @@ table.grid.transposed tr.row-grand > td {
   }
 }
 
-/* ——— Paysage : on profite de la largeur ——— */
-@media (orientation: landscape) {
+/* ——— KPI : la dernière tuile comble la rangée incomplète ——— */
+.kpis > .kpi:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+/* ——— Écrans larges (tablette, paysage, bureau) : on profite de la largeur ——— */
+@media (min-width: 600px) {
   #app {
     max-width: 1100px;
   }
@@ -690,6 +710,14 @@ table.grid.transposed tr.row-grand > td {
   .kpis {
     grid-template-columns: repeat(4, 1fr);
   }
+
+  .kpis > .kpi:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .kpis > .kpi:last-child:nth-child(4n + 3) {
+    grid-column: span 2;
+  }
 }
 
 /* ——— Téléphone en paysage (écran bas) : on compacte pour gagner de la hauteur ——— */
@@ -699,8 +727,9 @@ table.grid.transposed tr.row-grand > td {
     --tabbar-h: 56px;
   }
 
-  .tab .icon {
-    font-size: 30px;
+  .tab .icon svg {
+    width: 22px;
+    height: 22px;
   }
 
   .card {
