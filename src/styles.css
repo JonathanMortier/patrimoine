@@ -122,6 +122,9 @@ textarea:focus-visible {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  /* Ancre les éléments .sr-only (position: absolute) dans la zone défilante :
+     sinon ils étendent la hauteur du document et la barre d'onglets n'est plus collée en bas. */
+  position: relative;
 }
 
 .tabbar {

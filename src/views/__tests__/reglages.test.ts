@@ -9,6 +9,7 @@ import { mountApp, type Route } from '../../app'
 import { deleteDb } from '../../db'
 import { setup, lock, unlock, isUnlocked } from '../../crypto/security'
 import { constantesRepo, DEFAULT_CONSTANTES } from '../../db/repos/constantes'
+import { waitFor } from '../../test/waitFor'
 
 const PASSWORD = 'test-secret'
 
@@ -30,14 +31,14 @@ describe('Réglages : édition complète des constantes', () => {
   })
 
   it('affiche les champs de toutes les constantes', async () => {
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes'))
     for (const name of ['convUsdEur', 'plafondPea', 'btcUsd', 'btcEur', 'tauxRendement', 'mensualiteTradeRep', 'mensualiteFortuneo', 'dateOuverturePea']) {
       expect(view().querySelector<HTMLInputElement>(`[name="${name}"]`), name).not.toBeNull()
     }
   })
 
   it('pré-remplit depuis les constantes stockées', async () => {
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes'))
     const get = (name: string) => view().querySelector<HTMLInputElement>(`[name="${name}"]`)!.value
     expect(get('convUsdEur')).toBe('1.14')
     expect(get('plafondPea')).toBe('150000')
@@ -47,7 +48,7 @@ describe('Réglages : édition complète des constantes', () => {
   })
 
   it('enregistre les constantes modifiées', async () => {
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes'))
     const set = (name: string, value: string) => {
       const el = view().querySelector<HTMLInputElement>(`[name="${name}"]`)!
       el.value = value
@@ -64,7 +65,7 @@ describe('Réglages : édition complète des constantes', () => {
     expect(tauxInput.step).toBe('any')
 
     view().querySelector<HTMLFormElement>('#const-form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
 
     const saved = await constantesRepo.get()
     expect(saved.plafondPea).toBe(225000)
@@ -78,44 +79,44 @@ describe('Réglages : édition complète des constantes', () => {
   })
 
   it('enregistre l’ID client Google OAuth (champ texte)', async () => {
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes'))
     const clientId = view().querySelector<HTMLInputElement>('[name="googleClientId"]')!
     expect(clientId).not.toBeNull()
     clientId.value = '1234-abc.apps.googleusercontent.com'
     view().querySelector<HTMLFormElement>('#const-form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
     expect((await constantesRepo.get()).googleClientId).toBe('1234-abc.apps.googleusercontent.com')
   })
 
   it('accepte le taux en fraction (0.07) comme un pourcentage (7)', async () => {
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes'))
     const set = (name: string, value: string) => {
       const el = view().querySelector<HTMLInputElement>(`[name="${name}"]`)!
       el.value = value
     }
     set('tauxRendement', '0.07')
     view().querySelector<HTMLFormElement>('#const-form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
     expect((await constantesRepo.get()).tauxRendement).toBeCloseTo(0.07, 6)
   })
 
   it('conserve la conversion inchangée quand seule une autre constante change', async () => {
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes'))
     const plafond = view().querySelector<HTMLInputElement>('[name="plafondPea"]')!
     plafond.value = '120000'
     view().querySelector<HTMLFormElement>('#const-form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
     const saved = await constantesRepo.get()
     expect(saved.plafondPea).toBe(120000)
     expect(saved.convUsdEur).toBeCloseTo(1.14, 6)
   })
 
   it('rejette une conversion invalide (0 ou négatif)', async () => {
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes'))
     const conv = view().querySelector<HTMLInputElement>('[name="convUsdEur"]')!
     conv.value = '0'
     view().querySelector<HTMLFormElement>('#const-form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-    await vi.waitFor(() => expect(view().textContent).toContain('Conversion invalide'))
+    await waitFor(() => expect(view().textContent).toContain('Conversion invalide'))
     expect((await constantesRepo.get()).convUsdEur).toBeCloseTo(1.14, 6)
   })
 })
@@ -141,13 +142,13 @@ describe('Réglages : bouton « Récupérer les prix en ligne »', () => {
     document.body.innerHTML = '<div id="app"></div>'
     mountApp(document.getElementById('app')!)
     tabFor('reglages').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes'))
 
     const get = (name: string) => view().querySelector<HTMLInputElement>(`[name="${name}"]`)!.value
     expect(get('convUsdEur')).toBe('1.14')
 
     view().querySelector<HTMLButtonElement>('#fetch-market')!.click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Prix récupérés'))
+    await waitFor(() => expect(view().textContent).toContain('Prix récupérés'))
 
     expect(get('convUsdEur')).toBe('1.2')
     expect(get('btcUsd')).toBe('82000')
@@ -174,17 +175,17 @@ describe('Réglages : bouton « Récupérer les prix en ligne »', () => {
     document.body.innerHTML = '<div id="app"></div>'
     mountApp(document.getElementById('app')!)
     tabFor('reglages').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes'))
 
     view().querySelector<HTMLButtonElement>('#fetch-market')!.click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Prix récupérés'))
+    await waitFor(() => expect(view().textContent).toContain('Prix récupérés'))
 
     const conv = view().querySelector<HTMLInputElement>('[name="convUsdEur"]')!
     expect(conv.value).toBe('1.1583')
     expect(conv.step).toBe('any')
 
     view().querySelector<HTMLFormElement>('#const-form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes enregistrées'))
 
     const saved = await constantesRepo.get()
     expect(saved.convUsdEur).toBeCloseTo(1.1583, 4)
@@ -203,10 +204,10 @@ describe('Réglages : bouton « Récupérer les prix en ligne »', () => {
     document.body.innerHTML = '<div id="app"></div>'
     mountApp(document.getElementById('app')!)
     tabFor('reglages').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Constantes'))
+    await waitFor(() => expect(view().textContent).toContain('Constantes'))
 
     view().querySelector<HTMLButtonElement>('#fetch-market')!.click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Impossible de récupérer'))
+    await waitFor(() => expect(view().textContent).toContain('Impossible de récupérer'))
   })
 })
 
@@ -217,7 +218,7 @@ describe('Réglages : changement de mot de passe', () => {
     document.body.innerHTML = '<div id="app"></div>'
     mountApp(document.getElementById('app')!)
     tabFor('reglages').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Changer le mot de passe'))
+    await waitFor(() => expect(view().textContent).toContain('Changer le mot de passe'))
   })
 
   afterEach(async () => {
@@ -241,7 +242,7 @@ describe('Réglages : changement de mot de passe', () => {
     setPwField('confirm', 'nouveau-mdp-4')
     submitPwForm()
 
-    await vi.waitFor(() => expect(view().textContent).toContain('Mot de passe changé'))
+    await waitFor(() => expect(view().textContent).toContain('Mot de passe changé'))
     await new Promise((r) => setTimeout(r, 20))
 
     lock()
@@ -256,7 +257,7 @@ describe('Réglages : changement de mot de passe', () => {
     setPwField('confirm', 'nouveau-mdp-4')
     submitPwForm()
 
-    await vi.waitFor(() => expect(view().textContent).toContain('Ancien mot de passe incorrect'))
+    await waitFor(() => expect(view().textContent).toContain('Ancien mot de passe incorrect'))
     await new Promise((r) => setTimeout(r, 20))
 
     lock()
@@ -270,7 +271,7 @@ describe('Réglages : changement de mot de passe', () => {
     setPwField('confirm', 'abcde2')
     submitPwForm()
 
-    await vi.waitFor(() => expect(view().textContent).toContain('ne correspondent pas'))
+    await waitFor(() => expect(view().textContent).toContain('ne correspondent pas'))
     await new Promise((r) => setTimeout(r, 20))
 
     lock()

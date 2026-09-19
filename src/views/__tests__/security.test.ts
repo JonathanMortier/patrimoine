@@ -9,6 +9,7 @@ import { bootstrap, renderRoot } from '../../root'
 import { deleteDb } from '../../db'
 import { lock, isUnlocked, setup } from '../../crypto/security'
 import { AUTH_EVENT } from '../../events'
+import { waitFor } from '../../test/waitFor'
 
 const PASSWORD = 'test-secret'
 const SECOND_PASSWORD = 'nouveau-8'
@@ -52,9 +53,9 @@ describe('security : bootstrap et initialisation', () => {
     ;(form.querySelector('[name="confirm"]') as HTMLInputElement).value = SECOND_PASSWORD
     submitAuth(form)
 
-    await vi.waitFor(() => expect(isUnlocked()).toBe(true))
+    await waitFor(() => expect(isUnlocked()).toBe(true))
     expect(spy).toHaveBeenCalled()
-    await vi.waitFor(() => expect(document.getElementById('view')).not.toBeNull())
+    await waitFor(() => expect(document.getElementById('view')).not.toBeNull())
     expect(document.querySelector('.tabbar .tab')).not.toBeNull()
   })
 
@@ -65,7 +66,7 @@ describe('security : bootstrap et initialisation', () => {
     ;(form.querySelector('[name="confirm"]') as HTMLInputElement).value = 'mismatch'
     submitAuth(form)
 
-    await vi.waitFor(() => expect(form.textContent).toContain('ne correspondent pas'))
+    await waitFor(() => expect(form.textContent).toContain('ne correspondent pas'))
     expect(isUnlocked()).toBe(false)
   })
 })
@@ -91,9 +92,9 @@ describe('security : écran de verrouillage', () => {
     ;(form.querySelector('[name="password"]') as HTMLInputElement).value = PASSWORD
     submitAuth(form)
 
-    await vi.waitFor(() => expect(isUnlocked()).toBe(true))
+    await waitFor(() => expect(isUnlocked()).toBe(true))
     expect(spy).toHaveBeenCalled()
-    await vi.waitFor(() => expect(document.getElementById('view')).not.toBeNull())
+    await waitFor(() => expect(document.getElementById('view')).not.toBeNull())
     expect(document.querySelector('.tabbar .tab')).not.toBeNull()
   })
 
@@ -103,15 +104,15 @@ describe('security : écran de verrouillage', () => {
     ;(form.querySelector('[name="password"]') as HTMLInputElement).value = 'mauvais'
     submitAuth(form)
 
-    await vi.waitFor(() => expect(form.textContent).toContain('Mot de passe incorrect'))
+    await waitFor(() => expect(form.textContent).toContain('Mot de passe incorrect'))
     expect(isUnlocked()).toBe(false)
     expect((form.querySelector('[name="password"]') as HTMLInputElement).value).toBe('')
 
     ;(form.querySelector('[name="password"]') as HTMLInputElement).value = PASSWORD
     submitAuth(form)
 
-    await vi.waitFor(() => expect(isUnlocked()).toBe(true))
-    await vi.waitFor(() => expect(document.getElementById('view')).not.toBeNull())
+    await waitFor(() => expect(isUnlocked()).toBe(true))
+    await waitFor(() => expect(document.getElementById('view')).not.toBeNull())
     expect(document.querySelector('.tabbar .tab')).not.toBeNull()
   })
 })
@@ -140,7 +141,7 @@ describe('security : renderRoot selon l\'état', () => {
   it('état unlocked → application montée', async () => {
     await setup(PASSWORD)
     await renderRoot()
-    await vi.waitFor(() => expect(document.getElementById('view')).not.toBeNull())
+    await waitFor(() => expect(document.getElementById('view')).not.toBeNull())
     expect(document.querySelector('.tabbar .tab')).not.toBeNull()
   })
 })
