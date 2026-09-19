@@ -35,6 +35,20 @@ function selectOptions(): string[] {
   return Array.from(view().querySelector<HTMLSelectElement>('#m-target')!.options).map((o) => o.value)
 }
 
+/**
+ * Sélectionne le mois courant. `targetMonth` étant un état de module conservé d'un test
+ * à l'autre, le mois peut déjà être sélectionné : dans ce cas, aucun `change` n'est émis,
+ * sinon un re-rendu asynchrone en vol écraserait plus tard la vue après la suppression.
+ */
+async function selectCurrentMonth(): Promise<void> {
+  const select = view().querySelector<HTMLSelectElement>('#m-target')!
+  if (select.value !== currentMonthId()) {
+    select.value = currentMonthId()
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+  await waitFor(() => expect(view().querySelector('#delete')).not.toBeNull())
+}
+
 const month = (id: string) => ({
   id,
   bourse: { cto: 1000, privateMk: 0, pea: 500, plusValue: 0 },
@@ -124,10 +138,7 @@ describe('Saisie : suppression d’un mois', () => {
   })
 
   it('annuler ferme la modale sans supprimer', async () => {
-    const select = view().querySelector<HTMLSelectElement>('#m-target')!
-    select.value = currentMonthId()
-    select.dispatchEvent(new Event('change', { bubbles: true }))
-    await waitFor(() => expect(view().querySelector('#delete')).not.toBeNull())
+    await selectCurrentMonth()
 
     const modal = view().querySelector<HTMLElement>('#del-modal')!
     expect(modal.hidden).toBe(true)
@@ -141,10 +152,7 @@ describe('Saisie : suppression d’un mois', () => {
 
   it('confirmer supprime le mois et re-rend vers un mois inexistant', async () => {
     const cur = currentMonthId()
-    const select = view().querySelector<HTMLSelectElement>('#m-target')!
-    select.value = cur
-    select.dispatchEvent(new Event('change', { bubbles: true }))
-    await waitFor(() => expect(view().querySelector('#delete')).not.toBeNull())
+    await selectCurrentMonth()
 
     view().querySelector<HTMLButtonElement>('#delete')!.click()
     view().querySelector<HTMLButtonElement>('#del-confirm')!.click()
