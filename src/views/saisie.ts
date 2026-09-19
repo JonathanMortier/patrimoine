@@ -1,3 +1,4 @@
+import { trapFocus } from '../utils/dialog'
 import { monthRepo, newMonth } from '../db/repos/months'
 import { constantesRepo } from '../db/repos/constantes'
 import { creditsRepo, loanKey } from '../db/repos/credits'
@@ -106,9 +107,9 @@ export async function renderSaisie(view: HTMLElement): Promise<void> {
 
     <section class="card">
       <h2>Historique</h2>
-      <div class="segs" role="tablist">
-        ${DOMAIN_GROUPS.map((g) => `<button class="seg ${g.id === historyGroup ? 'active' : ''}" data-hgroup="${g.id}">${g.label}</button>`).join('')}
-        <button class="seg ${historyGroup === CREDITS_GROUP_ID ? 'active' : ''}" data-hgroup="${CREDITS_GROUP_ID}">Crédit restant</button>
+      <div class="segs" role="group" aria-label="Domaine de l'historique">
+        ${DOMAIN_GROUPS.map((g) => `<button class="seg ${g.id === historyGroup ? 'active' : ''}" aria-pressed="${g.id === historyGroup}" data-hgroup="${g.id}">${g.label}</button>`).join('')}
+        <button class="seg ${historyGroup === CREDITS_GROUP_ID ? 'active' : ''}" aria-pressed="${historyGroup === CREDITS_GROUP_ID}" data-hgroup="${CREDITS_GROUP_ID}">Crédit restant</button>
       </div>
       <div id="history">${renderHistory(months, constantes)}</div>
     </section>
@@ -188,7 +189,11 @@ function bindHistoryTabs(view: HTMLElement, months: MonthRecord[], constantes: C
   view.querySelectorAll<HTMLElement>('[data-hgroup]').forEach((btn) => {
     btn.addEventListener('click', () => {
       historyGroup = (btn.dataset.hgroup as DomainKey | typeof CREDITS_GROUP_ID)!
-      view.querySelectorAll('[data-hgroup]').forEach((b) => b.classList.toggle('active', (b as HTMLElement).dataset.hgroup === historyGroup))
+      view.querySelectorAll<HTMLElement>('[data-hgroup]').forEach((b) => {
+        const on = b.dataset.hgroup === historyGroup
+        b.classList.toggle('active', on)
+        b.setAttribute('aria-pressed', String(on))
+      })
       const el = view.querySelector<HTMLElement>('#history')
       if (el) el.innerHTML = renderHistory(months, constantes)
     })
@@ -302,8 +307,17 @@ function bindDelete(view: HTMLElement): void {
   const modal = view.querySelector<HTMLElement>('#del-modal')
   const open = view.querySelector<HTMLButtonElement>('#delete')
   if (!modal || !open) return
-  const openModal = () => { modal.hidden = false }
-  const closeModal = () => { modal.hidden = true }
+  let release: (() => void) | null = null
+  const closeModal = () => {
+    modal.hidden = true
+    release?.()
+    release = null
+  }
+  const openModal = () => {
+    modal.hidden = false
+    release = trapFocus(modal, closeModal)
+    modal.querySelector<HTMLElement>('#del-cancel')?.focus()
+  }
   open.addEventListener('click', openModal)
   view.querySelector('#del-cancel')!.addEventListener('click', closeModal)
   modal.addEventListener('click', (ev) => { if (ev.target === modal) closeModal() })

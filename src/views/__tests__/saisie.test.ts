@@ -11,6 +11,9 @@ import { setup } from '../../crypto/security'
 import { monthRepo } from '../../db/repos/months'
 import { compareMonthIds, currentMonthId, formatMonthLabel, nextAfterIds, previousMonthId } from '../../utils/date'
 
+// Timeout élargi : sur les runners CI (couverture v8), le rendu peut dépasser 1 s.
+const waitFor = <T>(fn: () => T | Promise<T>): Promise<T> => vi.waitFor(fn, { timeout: 4000 })
+
 const PASSWORD = 'test-secret'
 
 function tabFor(route: Route): HTMLButtonElement {
@@ -58,7 +61,7 @@ describe('Saisie : navigation prev/next et sélection du mois', () => {
 
   it('propose le mois suivant le dernier enregistré', async () => {
     tabFor('saisie').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Assistant'))
+    await waitFor(() => expect(view().textContent).toContain('Assistant'))
     const expected = nextAfterIds([previousMonthId(currentMonthId()), currentMonthId()])
     const select = view().querySelector<HTMLSelectElement>('#m-target')!
     expect(select.querySelector<HTMLOptionElement>('option[selected]')?.value).toBe(expected)
@@ -67,7 +70,7 @@ describe('Saisie : navigation prev/next et sélection du mois', () => {
 
   it('prev / next naviguent avec clamping aux bornes', async () => {
     tabFor('saisie').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Assistant'))
+    await waitFor(() => expect(view().textContent).toContain('Assistant'))
     const opts = selectOptions()
     const cur = currentMonthId()
     const prev = previousMonthId(cur)
@@ -76,32 +79,32 @@ describe('Saisie : navigation prev/next et sélection du mois', () => {
     expect(monthTitle()).toContain(formatMonthLabel(next))
 
     navButton('m-prev').click()
-    await vi.waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(cur)))
+    await waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(cur)))
 
     navButton('m-prev').click()
-    await vi.waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(prev)))
+    await waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(prev)))
 
     navButton('m-prev').click()
-    await vi.waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(prev)))
+    await waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(prev)))
 
     navButton('m-next').click()
-    await vi.waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(cur)))
+    await waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(cur)))
 
     navButton('m-next').click()
-    await vi.waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(next)))
+    await waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(next)))
 
     navButton('m-next').click()
-    await vi.waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(next)))
+    await waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(next)))
   })
 
   it('le sélecteur #m-target change le mois affiché', async () => {
     tabFor('saisie').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Assistant'))
+    await waitFor(() => expect(view().textContent).toContain('Assistant'))
     const prev = previousMonthId(currentMonthId())
     const select = view().querySelector<HTMLSelectElement>('#m-target')!
     select.value = prev
     select.dispatchEvent(new Event('change', { bubbles: true }))
-    await vi.waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(prev)))
+    await waitFor(() => expect(monthTitle()).toContain(formatMonthLabel(prev)))
     expect(view().querySelector<HTMLButtonElement>('#save')!.textContent).toContain(formatMonthLabel(prev))
   })
 })
@@ -118,14 +121,14 @@ describe('Saisie : suppression d’un mois', () => {
     if (location.hash !== '') location.hash = ''
     mountApp(document.getElementById('app')!)
     tabFor('saisie').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Assistant'))
+    await waitFor(() => expect(view().textContent).toContain('Assistant'))
   })
 
   it('annuler ferme la modale sans supprimer', async () => {
     const select = view().querySelector<HTMLSelectElement>('#m-target')!
     select.value = currentMonthId()
     select.dispatchEvent(new Event('change', { bubbles: true }))
-    await vi.waitFor(() => expect(view().querySelector('#delete')).not.toBeNull())
+    await waitFor(() => expect(view().querySelector('#delete')).not.toBeNull())
 
     const modal = view().querySelector<HTMLElement>('#del-modal')!
     expect(modal.hidden).toBe(true)
@@ -142,13 +145,13 @@ describe('Saisie : suppression d’un mois', () => {
     const select = view().querySelector<HTMLSelectElement>('#m-target')!
     select.value = cur
     select.dispatchEvent(new Event('change', { bubbles: true }))
-    await vi.waitFor(() => expect(view().querySelector('#delete')).not.toBeNull())
+    await waitFor(() => expect(view().querySelector('#delete')).not.toBeNull())
 
     view().querySelector<HTMLButtonElement>('#delete')!.click()
     view().querySelector<HTMLButtonElement>('#del-confirm')!.click()
 
-    await vi.waitFor(async () => expect(await monthRepo.get(cur)).toBeUndefined())
-    await vi.waitFor(() => {
+    await waitFor(async () => expect(await monthRepo.get(cur)).toBeUndefined())
+    await waitFor(() => {
       expect(view().querySelector<HTMLElement>('#del-modal')!.hidden).toBe(true)
       expect(view().querySelector('#delete')).toBeNull()
     })
