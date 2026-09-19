@@ -4,11 +4,12 @@ Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: tr
 
 import 'fake-indexeddb/auto'
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { mountApp } from '../../app'
 import { deleteDb } from '../../db'
 import { setup } from '../../crypto/security'
 import { creditsRepo } from '../../db/repos/credits'
+import { waitFor } from '../../test/waitFor'
 
 const GOOD_TSV = `Date\tCompte courant\tLivrets\tAssurance Vie\tCrowlending\tBourse\tCrypto\tTotal
 01/01/2025\t10341,02\t17502,76\t0\t0\t0\t0\t27843,78
@@ -82,7 +83,7 @@ describe('écran d’import : enchaînement Analyser → Importer', () => {
 
     await importBtn().click()
 
-    await vi.waitFor(async () => expect(await creditsRepo.all()).toHaveLength(5))
+    await waitFor(async () => expect(await creditsRepo.all()).toHaveLength(5))
     const loans = await creditsRepo.all()
     expect(loans.find((l) => l.numero === 1353608)).toMatchObject({ nom: 'Nardouzans', restant: 5328.13 })
     expect(loans.find((l) => l.numero === 1422340)).toMatchObject({ nom: 'Blanche', restant: 82834.08 })

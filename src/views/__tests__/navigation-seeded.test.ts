@@ -4,13 +4,14 @@ Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: tr
 
 import 'fake-indexeddb/auto'
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mountApp, type Route } from '../../app'
 import { deleteDb } from '../../db'
 import { monthRepo } from '../../db/repos/months'
 import { creditsRepo } from '../../db/repos/credits'
 import { setup } from '../../crypto/security'
 import { compareMonthIds, currentMonthId, nextAfterIds, previousMonthId } from '../../utils/date'
+import { waitFor } from '../../test/waitFor'
 
 const PASSWORD = 'test-secret'
 
@@ -49,7 +50,7 @@ describe('navigation avec mois déjà enregistrés', () => {
 
   it('l’assistant propose le mois suivant le dernier enregistré', async () => {
     tabFor('saisie').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Assistant'))
+    await waitFor(() => expect(view().textContent).toContain('Assistant'))
     const select = view().querySelector<HTMLSelectElement>('#m-target')!
     const selected = select.querySelector<HTMLOptionElement>('option[selected]')?.value
     const options = Array.from(select.options).map((o) => o.value)
@@ -60,7 +61,7 @@ describe('navigation avec mois déjà enregistrés', () => {
 
   it('les totaux du mois précédent apparaissent dans les étapes', async () => {
     tabFor('saisie').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Assistant'))
+    await waitFor(() => expect(view().textContent).toContain('Assistant'))
     const norm = view().textContent!.replace(/[\u202f\u00a0]/g, ' ')
     expect(norm).toContain('vs 1 500 € (▼ 1 500 €)')
     expect(norm).toContain('vs 500 € (▼ 500 €)')
@@ -72,7 +73,7 @@ describe('navigation avec mois déjà enregistrés', () => {
       bourse: { cto: 10000, privateMk: 0, pea: 5000, plusValue: 0 },
     })
     tabFor('dashboard').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Répartition'))
+    await waitFor(() => expect(view().textContent).toContain('Répartition'))
     expect(location.hash).toBe('#/dashboard')
     expect(view().textContent).toContain('Remplissage PEA')
     expect(view().querySelector('table.grid')).not.toBeNull()
@@ -85,7 +86,7 @@ describe('navigation avec mois déjà enregistrés', () => {
       taux: 0.015, mensualite: 850, montant: 200000, restant: 120000, pctRembourse: 40,
     })
     tabFor('dashboard').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Brut'))
+    await waitFor(() => expect(view().textContent).toContain('Brut'))
     expect(view().textContent).toContain('Part BTC (hors immo)')
     expect(view().textContent).toContain('Part BTC (brut')
     expect(view().textContent).toContain('Part BTC (net')
@@ -98,7 +99,7 @@ describe('navigation avec mois déjà enregistrés', () => {
     }
     await creditsRepo.save(loan)
     tabFor('credits').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Crédits immo'))
+    await waitFor(() => expect(view().textContent).toContain('Crédits immo'))
     expect(view().textContent).toContain('Nardouzans')
     expect(view().textContent).toContain('Sous-total')
     expect(view().textContent).toContain('Total')
@@ -114,7 +115,7 @@ describe('navigation avec mois déjà enregistrés', () => {
     }
     await creditsRepo.save(loan)
     tabFor('credits').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Crédits immo'))
+    await waitFor(() => expect(view().textContent).toContain('Crédits immo'))
 
     const departTh = view().querySelector<HTMLTableHeaderCellElement>('thead th[data-attr="depart"]')!
     expect(departTh.classList.contains('hidden')).toBe(false)
@@ -139,18 +140,18 @@ describe('navigation avec mois déjà enregistrés', () => {
     const target = nextAfterIds(['2026-09', '2026-11'])
     expect(target).toBe('2026-12')
     tabFor('saisie').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Crédit restant'))
+    await waitFor(() => expect(view().textContent).toContain('Crédit restant'))
     const select = view().querySelector<HTMLSelectElement>('#m-target')!
     expect(Array.from(select.options).map((o) => o.value)).toContain(target)
     const input = view().querySelector<HTMLInputElement>('input[data-credit-key="Nardouzans-1353608"]')!
     expect(input.value).toBe('5992.61')
     input.value = '5800'
     view().querySelector<HTMLButtonElement>('#save')!.click()
-    await vi.waitFor(async () => {
+    await waitFor(async () => {
       const m = await monthRepo.get(target)
       expect(m?.creditsRestant?.['Nardouzans-1353608']).toBe(5800)
     })
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(Array.from(view().querySelector<HTMLSelectElement>('#m-target')!.options).map((o) => o.value)).toContain('2027-01')
     })
   })
@@ -175,17 +176,17 @@ describe('navigation avec mois déjà enregistrés', () => {
     const target = nextAfterIds([lastId])
     expect(target).toBe(currentMonthId())
     tabFor('saisie').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Crédit restant'))
+    await waitFor(() => expect(view().textContent).toContain('Crédit restant'))
     const select = view().querySelector<HTMLSelectElement>('#m-target')!
     expect(Array.from(select.options).map((o) => o.value)).toContain(target)
     const input = view().querySelector<HTMLInputElement>('input[data-credit-key="Nardouzans-1353608"]')!
     input.value = '20000'
     view().querySelector<HTMLButtonElement>('#save')!.click()
-    await vi.waitFor(async () => {
+    await waitFor(async () => {
       expect((await monthRepo.get(target))?.creditsRestant?.['Nardouzans-1353608']).toBe(20000)
     })
     tabFor('dashboard').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('− dettes'))
+    await waitFor(() => expect(view().textContent).toContain('− dettes'))
     const norm = view().textContent!.replace(/[\u202f\u00a0]/g, ' ')
     expect(norm).toContain('− dettes 20 000 €')
   })

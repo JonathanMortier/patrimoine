@@ -4,12 +4,13 @@ Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: tr
 
 import 'fake-indexeddb/auto'
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { mountApp, ROUTES, type Route } from '../../app'
 import { deleteDb } from '../../db'
 import { monthRepo } from '../../db/repos/months'
 import { setup, lock } from '../../crypto/security'
 import { currentMonthId } from '../../utils/date'
+import { waitFor } from '../../test/waitFor'
 
 const PASSWORD = 'test-secret'
 
@@ -26,7 +27,7 @@ function view(): HTMLElement {
 }
 
 async function waitContent(pattern: string): Promise<void> {
-  await vi.waitFor(() => expect(view().textContent).toContain(pattern))
+  await waitFor(() => expect(view().textContent).toContain(pattern))
 }
 
 describe('navigation par onglets', () => {

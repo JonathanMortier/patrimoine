@@ -11,6 +11,7 @@ import { setup } from '../../crypto/security'
 import { collectBackupData, createBackupJson } from '../../backup/backup'
 import { monthRepo, newMonth } from '../../db/repos/months'
 import { constantesRepo, DEFAULT_CONSTANTES } from '../../db/repos/constantes'
+import { waitFor } from '../../test/waitFor'
 
 const PASSWORD = 'mot-de-passe-test'
 const IMPORT_PW = 'mot-de-passe-import'
@@ -69,7 +70,7 @@ describe("Écran d'import : export / import de fichier chiffré et Drive", () =>
     view().querySelector<HTMLButtonElement>('#bk-export')!.click()
     submitPassword(IMPORT_PW)
 
-    await vi.waitFor(() => expect(bkMsg().textContent).toContain('Sauvegarde exportée au format .json chiffré'))
+    await waitFor(() => expect(bkMsg().textContent).toContain('Sauvegarde exportée au format .json chiffré'))
     expect(urlSpy).toHaveBeenCalled()
     expect(modal().hidden).toBe(true)
   })
@@ -84,10 +85,10 @@ describe("Écran d'import : export / import de fichier chiffré et Drive", () =>
 
     await monthRepo.remove('2026-06')
     fileInput.dispatchEvent(new Event('change', { bubbles: true }))
-    await vi.waitFor(() => expect(modal().hidden).toBe(false))
+    await waitFor(() => expect(modal().hidden).toBe(false))
     submitPassword(IMPORT_PW)
 
-    await vi.waitFor(async () => expect(await monthRepo.get('2026-06')).toBeDefined())
+    await waitFor(async () => expect(await monthRepo.get('2026-06')).toBeDefined())
   })
 
   it('importe sans confirmer : ne touche pas aux données', async () => {
@@ -100,7 +101,7 @@ describe("Écran d'import : export / import de fichier chiffré et Drive", () =>
     Object.defineProperty(fileInput, 'files', { value: [file], configurable: true })
 
     fileInput.dispatchEvent(new Event('change', { bubbles: true }))
-    await vi.waitFor(() => expect(modal().hidden).toBe(false))
+    await waitFor(() => expect(modal().hidden).toBe(false))
     submitPassword(IMPORT_PW)
 
     await new Promise((r) => setTimeout(r, 30))
@@ -110,7 +111,7 @@ describe("Écran d'import : export / import de fichier chiffré et Drive", () =>
   it('vide tous les mois après double confirmation', async () => {
     await seedMonth()
     view().querySelector<HTMLButtonElement>('#reset')!.click()
-    await vi.waitFor(async () => expect(await monthRepo.get('2026-06')).toBeUndefined())
+    await waitFor(async () => expect(await monthRepo.get('2026-06')).toBeUndefined())
   })
 
   it('ne vide rien quand la première confirmation est refusée', async () => {
@@ -161,10 +162,10 @@ describe("Écran d'import : export / import de fichier chiffré et Drive", () =>
     vi.stubGlobal('fetch', fetchMock)
 
     view().querySelector<HTMLButtonElement>('#bk-drive-push')!.click()
-    await vi.waitFor(() => expect(modal().hidden).toBe(false))
+    await waitFor(() => expect(modal().hidden).toBe(false))
     submitPassword(PASSWORD)
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       const calls = fetchMock.mock.calls.map((c) => String(c[0]))
       expect(calls.some((u) => u.includes('/drive/v3/files?q='))).toBe(true)
       expect(calls.some((u) => u.includes('uploadType=multipart'))).toBe(true)
@@ -220,9 +221,9 @@ describe("Écran d'import : export / import de fichier chiffré et Drive", () =>
     vi.stubGlobal('fetch', fetchMock)
 
     view().querySelector<HTMLButtonElement>('#bk-drive-pull')!.click()
-    await vi.waitFor(() => expect(modal().hidden).toBe(false))
+    await waitFor(() => expect(modal().hidden).toBe(false))
     submitPassword(IMPORT_PW)
 
-    await vi.waitFor(async () => expect(await monthRepo.get('2026-06')).toBeDefined())
+    await waitFor(async () => expect(await monthRepo.get('2026-06')).toBeDefined())
   })
 })

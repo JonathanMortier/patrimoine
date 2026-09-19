@@ -4,13 +4,14 @@ Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: tr
 
 import 'fake-indexeddb/auto'
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mountApp, type Route } from '../../app'
 import { deleteDb } from '../../db'
 import { setup } from '../../crypto/security'
 import { monthRepo } from '../../db/repos/months'
 import { constantesRepo } from '../../db/repos/constantes'
 import { currentMonthId, previousMonthId } from '../../utils/date'
+import { waitFor } from '../../test/waitFor'
 
 const PASSWORD = 'test-secret'
 
@@ -44,7 +45,7 @@ describe('Projection Bourse', () => {
 
   it('affiche un état vide quand aucun mois n’est enregistré', async () => {
     tabFor('projection').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Projection Bourse'))
+    await waitFor(() => expect(view().textContent).toContain('Projection Bourse'))
     expect(view().textContent).toContain('Aucun mois enregistré')
     expect(view().querySelector('canvas')).toBeNull()
     expect(view().querySelector('table')).toBeNull()
@@ -55,7 +56,7 @@ describe('Projection Bourse', () => {
     await monthRepo.save(month(currentMonthId()))
 
     tabFor('projection').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Projection Bourse'))
+    await waitFor(() => expect(view().textContent).toContain('Projection Bourse'))
 
     expect(view().textContent).toContain('Salaire retrait 4 %')
     expect(view().textContent).not.toContain('Aucun mois enregistré')
@@ -77,7 +78,7 @@ describe('Projection Bourse', () => {
     await monthRepo.save(month(currentMonthId()))
 
     tabFor('projection').click()
-    await vi.waitFor(() => expect(view().textContent).toContain('Projection Bourse'))
+    await waitFor(() => expect(view().textContent).toContain('Projection Bourse'))
     const norm = view().textContent!.replace(/[\u202f\u00a0]/g, ' ')
     expect(norm).toContain('5 % + 1 300 €/mois')
   })
