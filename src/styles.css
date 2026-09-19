@@ -2,11 +2,13 @@
   --bg: #101828;
   --surface: #1d2939;
   --surface-2: #293548;
+  --surface-3: #334258;
   --text: #eef2f7;
   --muted: #98a2b3;
   --accent: #6366f1;
   --border: #2e3a4d;
   --danger: #ef4444;
+  --danger-text: #f87171;
   --ok: #22c55e;
   --radius: 12px;
   --topbar-h: 56px;
@@ -29,6 +31,7 @@ body {
   color: var(--text);
   font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
 }
 
 #app {
@@ -223,7 +226,7 @@ button:disabled {
 }
 
 .msg.err {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 /* Cartes */
@@ -337,6 +340,19 @@ textarea {
   overflow-x: auto;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+table.grid td {
+  white-space: nowrap;
+}
+
 table.grid {
   width: 100%;
   border-collapse: collapse;
@@ -435,7 +451,7 @@ table.grid th {
 }
 
 .var.neg {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .step-head {

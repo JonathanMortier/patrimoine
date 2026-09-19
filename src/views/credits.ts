@@ -10,8 +10,8 @@ const ATTRS: { id: string; label: string; fixed?: boolean }[] = [
   { id: 'depart', label: 'Départ' },
   { id: 'fin', label: 'Fin' },
   { id: 'taux', label: 'Taux' },
-  { id: 'montant', label: 'Montant' },
-  { id: 'total', label: 'Total' },
+  { id: 'montant', label: 'Mensualité' },
+  { id: 'total', label: 'Capital emprunté' },
   { id: 'restant', label: 'Restant', fixed: true },
   { id: 'rembourse', label: 'Remboursé' },
 ]
@@ -67,7 +67,6 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
   cols.push({ type: 'grand', men: totalMen, montant: totalMontant, restant: totalRestant })
 
   const monthsPalier = monthsUnderPrincipal(totalRestant, totalMen, PALIER)
-  const grandPct = totalMontant > 0 ? ((totalMontant - totalRestant) / totalMontant) * 100 : 0
 
   const attrCls = (attrId: string): string => (hidden.has(attrId) ? ' hidden' : '')
 
@@ -109,7 +108,7 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
 
   const head = `
     <tr>
-      <th class="row-label"></th>
+      <th class="row-label" scope="col"><span class="sr-only">Prêt</span></th>
       ${ATTRS.map((a) => `<th data-attr="${a.id}"${attrCls(a.id)}>${a.label}</th>`).join('')}
     </tr>`
 
@@ -136,9 +135,6 @@ export async function renderCredits(view: HTMLElement): Promise<void> {
       <div class="table-wrap"><table class="grid transposed">
         <thead>${head}</thead>
         <tbody>${bodyRows}</tbody>
-        <tfoot>
-          <tr><th class="row-label">Total général</th><td class="grand-content" colspan="${ATTRS.length + 1}">${fmtEuro(totalRestant)} restant · ${fmtPct(grandPct)} remboursé</td></tr>
-        </tfoot>
       </table></div>
       <p class="muted">Temps restant pour passer sous les ${fmtEuro(PALIER)} d'emprunt : <strong>${monthsPalier > 0 ? `${monthsPalier} mois (${dateUnderPrincipal(new Date().toISOString().slice(0, 10), monthsPalier)})` : 'déjà sous le palier'}</strong></p>
       <p class="muted">Le restant se saisit chaque mois dans l'assistant Saisie (« Crédit restant »).</p>
