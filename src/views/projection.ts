@@ -7,10 +7,8 @@ import { buildAnnualProjection } from '../calc/projectionAnnual'
 import { withdrawalMonthly } from '../calc/projection'
 import { currentMonthId } from '../utils/date'
 import { fmtEuro } from '../utils/format'
+import { SERIES_COLORS, lineDataset, lineOptions } from './chartTheme'
 
-const PALETTE = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#0ea5e9', '#a855f7']
-const AXIS = '#98a2b3'
-const GRID = '#2e3a4d'
 
 let charts: Chart[] = []
 
@@ -134,21 +132,12 @@ export async function renderProjection(view: HTMLElement): Promise<void> {
       data: {
         labels: annual.map((a) => a.year),
         datasets: [
-          { label: 'Réel', data: annual.map((a) => a.reel), borderColor: PALETTE[1], backgroundColor: PALETTE[1], borderWidth: 2, tension: 0.3, pointRadius: 2 },
-          { label: 'Plus value Réel', data: annual.map((a) => a.reelPlusValue), borderColor: PALETTE[0], backgroundColor: PALETTE[0], borderWidth: 2, tension: 0.3, pointRadius: 2 },
-          { label: 'Évol. plus value Réel', data: annual.map((a) => a.reelEvol), borderColor: PALETTE[2], backgroundColor: PALETTE[2], borderWidth: 2, borderDash: [6, 4], tension: 0.3, pointRadius: 2 },
+          lineDataset('Réel', SERIES_COLORS.reel, annual.map((a) => a.reel)),
+          lineDataset('Plus value Réel', SERIES_COLORS.objectif, annual.map((a) => a.reelPlusValue)),
+          lineDataset('Évol. plus value Réel', SERIES_COLORS.evolution, annual.map((a) => a.reelEvol), 2, true),
         ],
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        spanGaps: false,
-        plugins: { legend: { labels: { color: AXIS, boxWidth: 12, padding: 8 } } },
-        scales: {
-          x: { ticks: { color: AXIS }, grid: { color: GRID } },
-          y: { ticks: { color: AXIS }, grid: { color: GRID } },
-        },
-      },
+      options: { ...lineOptions(), spanGaps: false },
     }),
   )
 
@@ -158,20 +147,11 @@ export async function renderProjection(view: HTMLElement): Promise<void> {
       data: {
         labels: monthly.map((m) => m.label),
         datasets: [
-          { label: 'Objectif', data: monthly.map((m) => m.objectif), borderColor: PALETTE[0], backgroundColor: PALETTE[0], borderWidth: 2, tension: 0.3, pointRadius: 2 },
-          { label: 'Réel', data: monthly.map((m) => m.reel), borderColor: PALETTE[1], backgroundColor: PALETTE[1], borderWidth: 2, borderDash: [6, 4], tension: 0.3, pointRadius: 2 },
+          lineDataset('Objectif', SERIES_COLORS.objectif, monthly.map((m) => m.objectif)),
+          lineDataset('Réel', SERIES_COLORS.reel, monthly.map((m) => m.reel), 2, true),
         ],
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        spanGaps: false,
-        plugins: { legend: { labels: { color: AXIS, boxWidth: 12, padding: 8 } } },
-        scales: {
-          x: { ticks: { color: AXIS }, grid: { color: GRID } },
-          y: { ticks: { color: AXIS }, grid: { color: GRID } },
-        },
-      },
+      options: { ...lineOptions(), spanGaps: false },
     }),
   )
 }

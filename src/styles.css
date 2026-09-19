@@ -567,6 +567,14 @@ table.grid th {
   background: var(--accent);
 }
 
+.meter span.warn {
+  background: #f59e0b;
+}
+
+.meter span.full {
+  background: var(--danger);
+}
+
 .add-prop {
   gap: 8px;
 }
