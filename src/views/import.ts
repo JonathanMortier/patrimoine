@@ -1,3 +1,4 @@
+import { trapFocus } from '../utils/dialog'
 import { monthRepo, newMonth } from '../db/repos/months'
 import { constantesRepo } from '../db/repos/constantes'
 import { creditsRepo } from '../db/repos/credits'
@@ -40,8 +41,8 @@ export function renderImport(view: HTMLElement): void {
     </section>
 
     <section class="card">
-      <div class="segs" role="tablist">
-        ${KINDS.map((k) => `<button class="seg ${k.id === currentKind ? 'active' : ''}" data-kind="${k.id}">${k.label}</button>`).join('')}
+      <div class="segs" role="group" aria-label="Type de données à importer">
+        ${KINDS.map((k) => `<button class="seg ${k.id === currentKind ? 'active' : ''}" aria-pressed="${k.id === currentKind}" data-kind="${k.id}">${k.label}</button>`).join('')}
       </div>
       <label class="field">
         <span>Contenu de la feuille « ${kindLabel()} »</span>
@@ -102,7 +103,7 @@ export function renderImport(view: HTMLElement): void {
     </section>
 
     <div id="bk-pw-modal" class="modal-overlay" hidden>
-      <form class="modal" id="bk-pw-form">
+      <form class="modal" id="bk-pw-form" role="dialog" aria-modal="true" aria-labelledby="bk-pw-title">
         <h3 id="bk-pw-title">Mot de passe</h3>
         <p id="bk-pw-hint"></p>
         <label class="field">
@@ -431,8 +432,10 @@ function askPassword(view: HTMLElement, title: string, hint: string): Promise<st
     overlay.querySelector<HTMLElement>('#bk-pw-title')!.textContent = title
     overlay.querySelector<HTMLElement>('#bk-pw-hint')!.textContent = hint
     input.value = ''
+    const release = trapFocus(overlay, () => close(null))
     const close = (value: string | null) => {
       overlay.hidden = true
+      release()
       resolve(value)
     }
     overlay.querySelector<HTMLButtonElement>('#bk-pw-cancel')!.addEventListener('click', () => close(null))

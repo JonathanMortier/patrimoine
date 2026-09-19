@@ -1,14 +1,33 @@
 :root {
+  color-scheme: dark;
   --bg: #101828;
   --surface: #1d2939;
   --surface-2: #293548;
+  --surface-3: #334258;
   --text: #eef2f7;
   --muted: #98a2b3;
   --accent: #6366f1;
   --border: #2e3a4d;
   --danger: #ef4444;
+  --danger-text: #f87171;
   --ok: #22c55e;
+  --on-accent: #fff;
+  --overlay: rgba(0, 0, 0, 0.6);
   --radius: 12px;
+  --radius-sm: 10px;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --fs-xs: 11px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 18px;
+  --shadow-modal: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --ease: 0.15s ease;
+  --touch: 44px;
   --topbar-h: 56px;
   --tabbar-h: 60px;
 }
@@ -29,6 +48,7 @@ body {
   color: var(--text);
   font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
 }
 
 #app {
@@ -66,10 +86,24 @@ button {
   padding: 8px 12px;
   cursor: pointer;
   min-height: 36px;
+  transition: background var(--ease), border-color var(--ease), color var(--ease), filter var(--ease);
+}
+
+button:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--muted);
+}
+
+button:active:not(:disabled) {
+  filter: brightness(0.9);
 }
 
 button.ghost {
   background: transparent;
+}
+
+button.ghost:hover:not(:disabled) {
+  background: var(--surface);
 }
 
 button:focus-visible,
@@ -88,20 +122,6 @@ textarea:focus-visible {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-}
-
-.placeholder {
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
-  background: var(--surface);
-  color: var(--muted);
-}
-
-.placeholder h2 {
-  margin: 0 0 8px;
-  color: var(--text);
-  font-size: 16px;
 }
 
 .tabbar {
@@ -127,13 +147,41 @@ textarea:focus-visible {
   padding: 4px;
 }
 
+.tab:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+}
+
+.tab.active:hover:not(:disabled) {
+  color: var(--accent);
+}
+
 .tab .icon {
-  font-size: 35px;
+  display: flex;
   line-height: 1;
+}
+
+.tab .icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+#btn-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+}
+
+#btn-lock svg {
+  width: 20px;
+  height: 20px;
 }
 
 .tab.active {
   color: var(--accent);
+  box-shadow: inset 0 2px 0 var(--accent);
 }
 
 /* Auth (création / déverrouillage) */
@@ -194,14 +242,27 @@ input[type='date'] {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
+}
+
+button.primary:hover:not(:disabled),
+button.danger:hover:not(:disabled),
+.seg.active:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  filter: brightness(1.1);
+}
+
+button.danger:hover:not(:disabled) {
+  background: var(--danger);
+  border-color: var(--danger);
 }
 
 button.danger {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -210,6 +271,7 @@ button:disabled {
   border-color: var(--border);
   color: var(--muted);
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .msg {
@@ -223,7 +285,7 @@ button:disabled {
 }
 
 .msg.err {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 /* Cartes */
@@ -253,7 +315,7 @@ button:disabled {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -308,7 +370,7 @@ button:disabled {
 .seg.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 textarea {
@@ -335,6 +397,19 @@ textarea {
 
 .table-wrap {
   overflow-x: auto;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+table.grid td {
+  white-space: nowrap;
 }
 
 table.grid {
@@ -383,9 +458,6 @@ table.grid th {
   margin-bottom: 4px;
 }
 
-.month-title {
-  font-style: italic;
-}
 
 .kpis {
   display: grid;
@@ -435,7 +507,7 @@ table.grid th {
 }
 
 .var.neg {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .step-head {
@@ -447,7 +519,7 @@ table.grid th {
 
 .step-head h2 {
   flex: 1;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .badge {
@@ -455,7 +527,7 @@ table.grid th {
   height: 22px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 12px;
   font-weight: 700;
   display: inline-flex;
@@ -494,6 +566,14 @@ table.grid th {
   height: 100%;
   border-radius: 999px;
   background: var(--accent);
+}
+
+.meter span.warn {
+  background: #f59e0b;
+}
+
+.meter span.full {
+  background: var(--danger);
 }
 
 .add-prop {
@@ -598,8 +678,13 @@ table.grid.transposed tr.row-grand > td {
   }
 }
 
-/* ——— Paysage : on profite de la largeur ——— */
-@media (orientation: landscape) {
+/* ——— KPI : la dernière tuile comble la rangée incomplète ——— */
+.kpis > .kpi:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+/* ——— Écrans larges (tablette, paysage, bureau) : on profite de la largeur ——— */
+@media (min-width: 600px) {
   #app {
     max-width: 1100px;
   }
@@ -611,6 +696,14 @@ table.grid.transposed tr.row-grand > td {
   .kpis {
     grid-template-columns: repeat(4, 1fr);
   }
+
+  .kpis > .kpi:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .kpis > .kpi:last-child:nth-child(4n + 3) {
+    grid-column: span 2;
+  }
 }
 
 /* ——— Téléphone en paysage (écran bas) : on compacte pour gagner de la hauteur ——— */
@@ -620,8 +713,9 @@ table.grid.transposed tr.row-grand > td {
     --tabbar-h: 56px;
   }
 
-  .tab .icon {
-    font-size: 30px;
+  .tab .icon svg {
+    width: 22px;
+    height: 22px;
   }
 
   .card {
@@ -657,5 +751,22 @@ table.grid.transposed tr.row-grand > td {
 
   .grid2 {
     grid-template-columns: 1fr 1fr;
+  }
+}
+/* Cibles tactiles confortables sur écrans tactiles */
+@media (pointer: coarse) {
+  button,
+  .unchips .chip {
+    min-height: var(--touch);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

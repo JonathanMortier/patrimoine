@@ -6,10 +6,7 @@ import { dashboardSeries, missingMonths, type DashboardPoint } from '../calc/das
 import { brutTotal, netTotal, immoBrut, restantDette, btcShare } from '../calc/netBrut'
 import { formatMonthLabel, currentMonthId } from '../utils/date'
 import { fmtEuro, fmtPct } from '../utils/format'
-
-const PALETTE = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#0ea5e9', '#a855f7']
-const AXIS = '#98a2b3'
-const GRID = '#2e3a4d'
+import { CATEGORY_COLORS, SURFACE, donutOptions, lineDataset, lineOptions } from './chartTheme'
 
 let charts: Chart[] = []
 
@@ -85,11 +82,11 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
   ).join('')
 
   const slices = [
-    { label: 'Bourse', value: last.bourse },
-    { label: 'Assurance Vie', value: last.assuranceVie },
-    { label: 'Crowdfunding', value: last.crowdlending },
-    { label: 'Crypto', value: last.crypto },
-    { label: 'Comptes / Livrets', value: last.compteCourant + last.livrets },
+    { label: 'Bourse', value: last.bourse, color: CATEGORY_COLORS.bourse },
+    { label: 'Assurance Vie', value: last.assuranceVie, color: CATEGORY_COLORS.assuranceVie },
+    { label: 'Crowdfunding', value: last.crowdlending, color: CATEGORY_COLORS.crowdlending },
+    { label: 'Crypto', value: last.crypto, color: CATEGORY_COLORS.crypto },
+    { label: 'Comptes / Livrets', value: last.compteCourant + last.livrets, color: CATEGORY_COLORS.comptes },
   ].filter((s) => s.value > 0)
 
   view.innerHTML = `
@@ -111,7 +108,7 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
       <h2>Objectifs</h2>
       <label class="field">
         <span>Remplissage PEA — ${peaPct === null ? 'plafond non défini' : fmtPct(peaPct)}</span>
-        <div class="meter">${peaPct !== null ? `<span style="width:${Math.min(100, peaPct).toFixed(1)}%"></span>` : ''}</div>
+        <div class="meter"${peaPct !== null ? ` role="progressbar" aria-label="Remplissage du PEA" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, peaPct).toFixed(1)}"` : ''}>${peaPct !== null ? `<span class="${peaPct >= 100 ? 'full' : peaPct >= 90 ? 'warn' : ''}" style="width:${Math.min(100, peaPct).toFixed(1)}%"></span>` : ''}</div>
         <span class="muted">${fmtEuro(peaNet)} (PEA net) / ${fmtEuro(constantes.plafondPea)}</span>
       </label>
       <div class="row"><span class="muted">Part BTC (hors immo)</span><span class="step-total">${btcHorsImmo === null ? '—' : fmtPct(btcHorsImmo * 100)}</span></div>
@@ -122,16 +119,17 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
 
     <section class="card">
       <h2>Évolution mensuelle</h2>
-      <div class="chart-box"><canvas id="chart-evol"></canvas></div>
+      <div class="chart-box"><canvas id="chart-evol" role="img" aria-label="Courbes de l'évolution mensuelle par domaine ; les valeurs des derniers mois sont dans le tableau ci-dessous"></canvas></div>
       <div class="table-wrap"><table class="grid">
-        <thead><tr><th>Mois</th><th>Bourse</th><th>AV</th><th>Crowd.</th><th>Crypto</th><th>Hors immo</th></tr></thead>
+        <caption class="sr-only">Valeurs des six derniers mois</caption>
+        <thead><tr><th scope="col">Mois</th><th scope="col">Bourse</th><th scope="col">AV</th><th scope="col">Crowd.</th><th scope="col">Crypto</th><th scope="col">Hors immo</th></tr></thead>
         <tbody>${fallbackRows}</tbody>
       </table></div>
     </section>
 
     <section class="card">
       <h2>Répartition — ${last.short}</h2>
-      <div class="chart-box chart-box-donut"><canvas id="chart-repart"></canvas></div>
+      <div class="chart-box chart-box-donut"><canvas id="chart-repart" role="img" aria-label="Répartition du patrimoine hors immobilier ; le détail est listé ci-dessous"></canvas></div>
       ${slices.map((s) => `<div class="row"><span class="muted">${s.label}</span><span class="step-total">${fmtEuro(s.value)}</span></div>`).join('')}
     </section>
   `
@@ -141,50 +139,33 @@ export async function renderDashboard(view: HTMLElement): Promise<void> {
 }
 
 function makeLineChart(canvas: HTMLCanvasElement, series: DashboardPoint[]): Chart {
-  const labels = series.map((p) => p.short)
   // 0 → null : un domaine non renseigné (ex. octobre) casse la courbe
   // au lieu de faire plonger la ligne à zéro.
   const serie = (get: (p: DashboardPoint) => number): (number | null)[] =>
     series.map((p) => { const v = get(p); return v === 0 ? null : v })
-  const mk = (label: string, color: string, data: (number | null)[], width = 1) => ({
-    label, data, borderColor: color, backgroundColor: color,
-    borderWidth: width, tension: 0.3, pointRadius: 2,
-  })
   return new Chart(canvas, {
     type: 'line',
     data: {
-      labels,
+      labels: series.map((p) => p.short),
       datasets: [
-        mk('Hors immo', '#ffffff', serie((p) => p.horsImmo), 2.5),
-        mk('Bourse', PALETTE[0], serie((p) => p.bourse)),
-        mk('Assurance Vie', PALETTE[1], serie((p) => p.assuranceVie)),
-        mk('Crowdfunding', PALETTE[2], serie((p) => p.crowdlending)),
-        mk('Crypto', PALETTE[3], serie((p) => p.crypto)),
+        lineDataset('Hors immo', CATEGORY_COLORS.total, serie((p) => p.horsImmo), 3),
+        lineDataset('Bourse', CATEGORY_COLORS.bourse, serie((p) => p.bourse)),
+        lineDataset('Assurance Vie', CATEGORY_COLORS.assuranceVie, serie((p) => p.assuranceVie)),
+        lineDataset('Crowdfunding', CATEGORY_COLORS.crowdlending, serie((p) => p.crowdlending)),
+        lineDataset('Crypto', CATEGORY_COLORS.crypto, serie((p) => p.crypto)),
       ],
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: AXIS, boxWidth: 12, padding: 8 } } },
-      scales: {
-        x: { ticks: { color: AXIS }, grid: { color: GRID } },
-        y: { ticks: { color: AXIS }, grid: { color: GRID } },
-      },
-    },
+    options: lineOptions(),
   })
 }
 
-function makeDonutChart(canvas: HTMLCanvasElement, slices: { label: string; value: number }[]): Chart {
+function makeDonutChart(canvas: HTMLCanvasElement, slices: { label: string; value: number; color: string }[]): Chart {
   return new Chart(canvas, {
     type: 'doughnut',
     data: {
       labels: slices.map((s) => s.label),
-      datasets: [{ data: slices.map((s) => s.value), backgroundColor: PALETTE, borderColor: '#1d2939', borderWidth: 2 }],
+      datasets: [{ data: slices.map((s) => s.value), backgroundColor: slices.map((s) => s.color), borderColor: SURFACE, borderWidth: 2 }],
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: AXIS, boxWidth: 12, padding: 8 } } },
-    },
+    options: donutOptions(),
   })
 }
