@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #101828;
   --surface: #1d2939;
   --surface-2: #293548;
@@ -10,7 +11,23 @@
   --danger: #ef4444;
   --danger-text: #f87171;
   --ok: #22c55e;
+  --on-accent: #fff;
+  --overlay: rgba(0, 0, 0, 0.6);
   --radius: 12px;
+  --radius-sm: 10px;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --fs-xs: 11px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 18px;
+  --shadow-modal: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --ease: 0.15s ease;
+  --touch: 44px;
   --topbar-h: 56px;
   --tabbar-h: 60px;
 }
@@ -69,10 +86,24 @@ button {
   padding: 8px 12px;
   cursor: pointer;
   min-height: 36px;
+  transition: background var(--ease), border-color var(--ease), color var(--ease), filter var(--ease);
+}
+
+button:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--muted);
+}
+
+button:active:not(:disabled) {
+  filter: brightness(0.9);
 }
 
 button.ghost {
   background: transparent;
+}
+
+button.ghost:hover:not(:disabled) {
+  background: var(--surface);
 }
 
 button:focus-visible,
@@ -128,6 +159,16 @@ textarea:focus-visible {
   color: var(--muted);
   font-size: 11px;
   padding: 4px;
+}
+
+.tab:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+}
+
+.tab.active:hover:not(:disabled) {
+  color: var(--accent);
 }
 
 .tab .icon {
@@ -197,14 +238,27 @@ input[type='date'] {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
+}
+
+button.primary:hover:not(:disabled),
+button.danger:hover:not(:disabled),
+.seg.active:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  filter: brightness(1.1);
+}
+
+button.danger:hover:not(:disabled) {
+  background: var(--danger);
+  border-color: var(--danger);
 }
 
 button.danger {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -213,6 +267,7 @@ button:disabled {
   border-color: var(--border);
   color: var(--muted);
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .msg {
@@ -256,7 +311,7 @@ button:disabled {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -311,7 +366,7 @@ button:disabled {
 .seg.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 textarea {
@@ -471,7 +526,7 @@ table.grid th {
   height: 22px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 12px;
   font-weight: 700;
   display: inline-flex;
@@ -673,5 +728,22 @@ table.grid.transposed tr.row-grand > td {
 
   .grid2 {
     grid-template-columns: 1fr 1fr;
+  }
+}
+/* Cibles tactiles confortables sur écrans tactiles */
+@media (pointer: coarse) {
+  button,
+  .unchips .chip {
+    min-height: var(--touch);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
