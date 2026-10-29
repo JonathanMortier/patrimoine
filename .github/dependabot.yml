@@ -1,0 +1,35 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      # Les correctifs de sécurité (déclenchés par alerte, indépendamment du
+      # planning ci-dessus) arrivaient un par un. Ils sont regroupés en une
+      # seule PR par run.
+      npm-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      # Mises à jour de routine (hors sécurité) : mineures et correctifs
+      # regroupés en une PR hebdomadaire. Les montées majeures restent
+      # séparées, pour une relecture au cas par cas.
+      npm-minor-patch:
+        applies-to: "version-updates"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
