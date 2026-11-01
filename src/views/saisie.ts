@@ -246,6 +246,17 @@ function bindMonthSelect(view: HTMLElement, ids: string[]): void {
 
 function bindStepsTotal(view: HTMLElement, live: Map<string, MonthLive>, constantes: Constantes): void {
   view.querySelectorAll<HTMLInputElement>('#steps input[name]').forEach((input) => {
+    // Un champ encore à 0 (nouveau mois) se vide directement au focus, pour ne
+    // pas avoir à l'effacer avant de saisir une valeur. `select()` ne fonctionne
+    // pas sur un <input type="number"> (l'API de sélection n'y est pas prise en
+    // charge), d'où le vidage plutôt qu'une sélection du texte.
+    input.addEventListener('focus', () => {
+      if (input.value === '0') input.value = ''
+    })
+    input.addEventListener('blur', () => {
+      if (input.value.trim() === '') input.value = '0'
+    })
+
     input.addEventListener('input', () => {
       const month = collectAll(view)
       const summary = view.querySelector<HTMLElement>('#summary')
