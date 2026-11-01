@@ -34,12 +34,15 @@ export function loadGis(): Promise<void> {
   gisPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script')
     script.async = true
-    script.crossOrigin = 'anonymous'
-    // Pas de SRI (`integrity`) ici : accounts.google.com/gsi/client est une URL
-    // vivante, non versionnée, que Google peut faire évoluer à tout moment —
-    // une empreinte figée dessus casse tôt ou tard dès que son contenu change
-    // (constaté : le script réel ne correspondait plus à l'empreinte figée).
-    // Le snippet officiel de Google n'utilise d'ailleurs jamais `integrity` ici.
+    // Ni `crossOrigin` ni `integrity` ici : `crossOrigin` force un chargement
+    // en mode CORS, que accounts.google.com/gsi/client refuse (pas d'en-tête
+    // Access-Control-Allow-Origin) — constaté en local, le script est alors
+    // bloqué. `integrity` est à proscrire pour la même raison que ci-dessous :
+    // cette URL est vivante, non versionnée, que Google peut faire évoluer à
+    // tout moment — une empreinte figée dessus casse tôt ou tard dès que son
+    // contenu change (constaté : le script réel ne correspondait plus à
+    // l'empreinte figée). Le snippet officiel de Google n'utilise ni l'un ni
+    // l'autre sur ce script : un simple <script src="..."> suffit.
     script.onload = () => resolve()
     script.onerror = () => reject(new DriveError('Impossible de charger Google Identity Services.'))
     script.src = GIS_SRC
