@@ -3,6 +3,7 @@ import { constantesRepo } from '../db/repos/constantes'
 import type { Constantes } from '../db/schema'
 import { escapeAttr, fmtAmount } from '../utils/format'
 import { fetchMarketPrices, MarketFetchError } from '../utils/market'
+import { attachPasswordToggles } from '../utils/passwordToggle'
 
 type FieldDef = {
   key: keyof Constantes
@@ -100,6 +101,8 @@ export async function renderReglages(view: HTMLElement): Promise<void> {
       </form>
     </section>
   `
+
+  attachPasswordToggles(view)
 
   const constMsg = view.querySelector<HTMLParagraphElement>('#const-form .msg')!
   const fetchBtn = view.querySelector<HTMLButtonElement>('#fetch-market')!
