@@ -190,3 +190,57 @@ describe('Saisie : historique — onglet Crypto', () => {
     expect(norm).toContain('0,00023 BTC')
   })
 })
+
+describe('Saisie : champ à 0 — vidé au focus', () => {
+  afterEach(() => new Promise((r) => setTimeout(r, 20)))
+
+  beforeEach(async () => {
+    await deleteDb()
+    await setup(PASSWORD)
+    await monthRepo.save(month(previousMonthId(currentMonthId())))
+    document.body.innerHTML = '<div id="app"></div>'
+    if (location.hash !== '') location.hash = ''
+    mountApp(document.getElementById('app')!)
+    tabFor('saisie').click()
+    await waitFor(() => expect(view().textContent).toContain('Assistant'))
+  })
+
+  it('se vide au focus quand la valeur est 0, et redevient 0 si laissé vide au blur', () => {
+    // `bourse.privateMk` vaut 0 dans le fixture `month()`.
+    const input = view().querySelector<HTMLInputElement>('input[name="bourse.privateMk"]')!
+    expect(input.value).toBe('0')
+
+    input.dispatchEvent(new Event('focus'))
+    expect(input.value).toBe('')
+
+    input.dispatchEvent(new Event('blur'))
+    expect(input.value).toBe('0')
+  })
+
+  it('ne touche pas à une valeur déjà saisie au focus, et la laisse inchangée au blur', async () => {
+    // Le mois proposé par défaut est le suivant (vide) : on sélectionne le mois
+    // déjà enregistré pour éditer ses valeurs, dont `bourse.cto` = 1000.
+    const saved = previousMonthId(currentMonthId())
+    const select = view().querySelector<HTMLSelectElement>('#m-target')!
+    select.value = saved
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+    await waitFor(() => expect(view().querySelector<HTMLInputElement>('input[name="bourse.cto"]')?.value).toBe('1000'))
+
+    const input = view().querySelector<HTMLInputElement>('input[name="bourse.cto"]')!
+
+    input.dispatchEvent(new Event('focus'))
+    expect(input.value).toBe('1000')
+
+    input.dispatchEvent(new Event('blur'))
+    expect(input.value).toBe('1000')
+  })
+
+  it('garde la valeur tapée après un focus qui a vidé le 0', () => {
+    const input = view().querySelector<HTMLInputElement>('input[name="bourse.privateMk"]')!
+    input.dispatchEvent(new Event('focus'))
+    input.value = '42'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new Event('blur'))
+    expect(input.value).toBe('42')
+  })
+})
