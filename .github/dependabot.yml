@@ -3,6 +3,10 @@ version: 2
 updates:
   - package-ecosystem: "npm"
     directory: "/"
+    # Suit le flux du projet (AGENTS.md) : develop est la branche d'intégration,
+    # main n'est alimentée que par des PR depuis develop. Sans ce réglage,
+    # Dependabot cible la branche par défaut (main) et la contourne.
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -26,6 +30,7 @@ updates:
 
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"

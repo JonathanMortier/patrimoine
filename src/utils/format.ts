@@ -38,3 +38,8 @@ export function fmtAmount(n: number): string {
     maximumFractionDigits: 4,
   }).format(n)
 }
+
+/** Quantité de BTC (et non un montant en euros) : jusqu'à 8 décimales (précision satoshi). */
+export function fmtBtc(n: number): string {
+  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 8 }).format(n)} BTC`
+}
