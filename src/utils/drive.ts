@@ -5,7 +5,6 @@ export class DriveError extends Error {}
 export const DRIVE_BACKUP_NAME = `${BACKUP_FILE_PREFIX}-current.json`
 
 const GIS_SRC = 'https://accounts.google.com/gsi/client'
-const GIS_SRI = 'sha256-z3SpzgoixxeBGMojqwbNabfIvMVHMYPxlrODq67+Yko='
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 const FILES_URL = 'https://www.googleapis.com/drive/v3/files'
 const UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files'
@@ -36,7 +35,11 @@ export function loadGis(): Promise<void> {
     const script = document.createElement('script')
     script.async = true
     script.crossOrigin = 'anonymous'
-    script.integrity = GIS_SRI
+    // Pas de SRI (`integrity`) ici : accounts.google.com/gsi/client est une URL
+    // vivante, non versionnée, que Google peut faire évoluer à tout moment —
+    // une empreinte figée dessus casse tôt ou tard dès que son contenu change
+    // (constaté : le script réel ne correspondait plus à l'empreinte figée).
+    // Le snippet officiel de Google n'utilise d'ailleurs jamais `integrity` ici.
     script.onload = () => resolve()
     script.onerror = () => reject(new DriveError('Impossible de charger Google Identity Services.'))
     script.src = GIS_SRC
