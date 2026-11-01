@@ -242,6 +242,44 @@ input[type='date'] {
   width: 100%;
 }
 
+/* Bouton « afficher le mot de passe » */
+.pw-field {
+  position: relative;
+}
+
+.pw-field input {
+  padding-right: 40px;
+}
+
+.pw-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 40px;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 0 10px 10px 0;
+  color: var(--muted);
+  padding: 0;
+}
+
+.pw-toggle:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+}
+
+@media (pointer: coarse) {
+  .pw-toggle {
+    width: var(--touch);
+  }
+}
+
 button.primary {
   background: var(--accent);
   border-color: var(--accent);

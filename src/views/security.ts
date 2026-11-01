@@ -1,5 +1,6 @@
 import { PasswordError, lock, setup, unlock } from '../crypto/security'
 import { emitAuthEvent } from '../events'
+import { attachPasswordToggles } from '../utils/passwordToggle'
 
 function formShell(
   title: string,
@@ -37,6 +38,7 @@ function setMsg(root: HTMLElement, text: string, ok: boolean): void {
 export function renderCreateScreen(root: HTMLElement): void {
   const card = formShell('Définissez un mot de passe pour chiffrer vos données.', 'Créer le mot de passe', true)
   root.appendChild(card)
+  attachPasswordToggles(card)
 
   card.querySelector('form')!.addEventListener('submit', async (ev) => {
     ev.preventDefault()
@@ -58,6 +60,7 @@ export function renderCreateScreen(root: HTMLElement): void {
 export function renderLockScreen(root: HTMLElement): void {
   const card = formShell('Déverrouillez pour accéder à vos données chiffrées.', 'Déverrouiller', false)
   root.appendChild(card)
+  attachPasswordToggles(card)
 
   card.querySelector('form')!.addEventListener('submit', async (ev) => {
     ev.preventDefault()

@@ -8,6 +8,7 @@ import { reconcileMonths, formatReconDiff } from '../import/reconcile'
 import { backupFileName, collectBackupData, createBackupJson, MAX_BACKUP_BYTES, parseBackupString, restoreBackupData } from '../backup/backup'
 import { DriveError, DRIVE_BACKUP_NAME, downloadBackupFile, findBackupFile, getAccessToken, uploadBackupFile } from '../utils/drive'
 import { escapeHtml } from '../utils/format'
+import { attachPasswordToggles } from '../utils/passwordToggle'
 
 const KINDS: { id: SheetKind | 'credits'; label: string }[] = [
   { id: 'horsImmo', label: 'Hors immo' },
@@ -117,6 +118,8 @@ export function renderImport(view: HTMLElement): void {
       </form>
     </div>
   `
+
+  attachPasswordToggles(view)
 
   KINDS.forEach((k) => {
     view.querySelector(`[data-kind="${k.id}"]`)!.addEventListener('click', () => {
