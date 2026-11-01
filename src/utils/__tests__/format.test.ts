@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { escapeAttr, escapeHtml, fmtEuro, fmtPct } from '../format'
+import { escapeAttr, escapeHtml, fmtBtc, fmtEuro, fmtPct } from '../format'
 
 describe('escapeHtml / escapeAttr', () => {
   it('échappe les caractères HTML sensibles en contexte texte', () => {
@@ -46,5 +46,19 @@ describe('fmtPct', () => {
     expect(fmtPct(0.0749, 2)).toBe('0.07 %')
     expect(fmtPct(0.0751, 2)).toBe('0.08 %')
     expect(fmtPct(0.123456, 0)).toBe('0 %')
+  })
+})
+
+describe('fmtBtc', () => {
+  it('garde la précision décimale (contrairement à fmtEuro)', () => {
+    expect(fmtBtc(0.00023)).toBe('0,00023 BTC')
+  })
+
+  it('affiche un entier sans décimale superflue', () => {
+    expect(fmtBtc(2)).toBe('2 BTC')
+  })
+
+  it('arrondit au-delà de 8 décimales (précision satoshi)', () => {
+    expect(fmtBtc(0.123456789)).toBe('0,12345679 BTC')
   })
 })

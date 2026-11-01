@@ -165,3 +165,28 @@ describe('Saisie : suppression d’un mois', () => {
     expect(view().textContent).toContain('supprimé')
   })
 })
+
+describe('Saisie : historique — onglet Crypto', () => {
+  afterEach(() => new Promise((r) => setTimeout(r, 20)))
+
+  beforeEach(async () => {
+    await deleteDb()
+    await setup(PASSWORD)
+    await monthRepo.save({
+      ...month(previousMonthId(currentMonthId())),
+      crypto: { tradeRep: 0, binance: 0, ledger: 0, hotWalletPrincipalUSD: 0, hotWalletLedgerUSD: 0, defiUSD: 0, btc: 0.00023 },
+    })
+    document.body.innerHTML = '<div id="app"></div>'
+    if (location.hash !== '') location.hash = ''
+    mountApp(document.getElementById('app')!)
+    tabFor('saisie').click()
+    await waitFor(() => expect(view().textContent).toContain('Assistant'))
+  })
+
+  it('affiche la quantité BTC en BTC, pas arrondie en euros', async () => {
+    view().querySelector<HTMLButtonElement>('[data-hgroup="crypto"]')!.click()
+    await waitFor(() => expect(view().textContent).toContain('BTC'))
+    const norm = view().textContent!.replace(/[  ]/g, ' ')
+    expect(norm).toContain('0,00023 BTC')
+  })
+})
