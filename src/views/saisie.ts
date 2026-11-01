@@ -14,7 +14,7 @@ import {
   type DomainKey,
   type MonthLive,
 } from './fields'
-import { escapeHtml, escapeAttr, fmtEuro } from '../utils/format'
+import { escapeHtml, escapeAttr, fmtEuro, fmtBtc } from '../utils/format'
 
 const CREDITS_GROUP_ID = 'creditsRestant'
 
@@ -154,7 +154,8 @@ function renderHistory(months: MonthRecord[], constantes: Constantes): string {
         .map((f) => {
           const [d, k] = f.path.split('.') as [DomainKey, string]
           const v = (m[d] as unknown as Record<string, number>)[k] ?? 0
-          return `<td>${fmtEuro(v)}</td>`
+          // « Quantité BTC » est une quantité, pas un montant en euros.
+          return `<td>${f.path === 'crypto.btc' ? fmtBtc(v) : fmtEuro(v)}</td>`
         })
         .join('')
       return `<tr><td>${m.id}</td>${cells}<td><strong>${fmtEuro(groupTotal(group.id, m, constantes))}</strong></td></tr>`
